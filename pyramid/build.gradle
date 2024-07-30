@@ -11,7 +11,7 @@ android {
         targetSdk 28
         ndk { abiFilters "armeabi-v7a" }
         python {
-            buildPython "C:/Users/FongMi/AppData/Local/Programs/Python/Python38/python.exe"
+            buildPython "D:/Program Files/Python38/python.exe"
             pip {
                 install "lxml"
                 install "ujson"
