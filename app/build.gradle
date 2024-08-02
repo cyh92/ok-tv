@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.fongmi.android.tv"
-        minSdk 16
+        minSdk 19
         targetSdk 28
         versionCode 247
         versionName "2.4.7"
@@ -90,7 +90,8 @@ dependencies {
     implementation 'com.github.ctiao:DanmakuFlameMaster:0.9.25'
     implementation 'com.github.hedzr:android-file-chooser:v1.2.0-final'
     implementation 'com.github.jahirfiquitiva:TextDrawable:1.0.3'
-    implementation('com.github.teamnewpipe:NewPipeExtractor:v0.23.1') { exclude group: 'org.jsoup', module: 'jsoup' }
+//    implementation('com.github.teamnewpipe:NewPipeExtractor:v0.23.1') { exclude group: 'org.jsoup', module: 'jsoup' }
+    implementation 'com.github.teamnewpipe:NewPipeExtractor:v0.24.0'
     implementation 'com.github.thegrizzlylabs:sardine-android:0.9'
     implementation 'com.github.YarikSOffice:lingver:1.3.0'
     implementation 'com.google.android.material:material:1.11.0'
