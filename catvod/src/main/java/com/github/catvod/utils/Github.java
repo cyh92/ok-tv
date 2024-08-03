@@ -8,7 +8,7 @@ import java.io.File;
 
 public class Github {
 
-    public static final String URL = "http://666.ewwe.gq/fongmi/release/main";
+    public static final String URL = "https://cyh92.github.io/Release";
 
     private static String getUrl(String path, String name) {
         return URL + "/" + path + "/" + name;

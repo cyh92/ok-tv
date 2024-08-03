@@ -102,7 +102,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void initView() {
-        DLNARendererService.Companion.start(this, R.drawable.ic_logo);
+//        DLNARendererService.Companion.start(this, R.drawable.ic_logo);
         mClock = Clock.create(mBinding.clock).format("MM/dd HH:mm:ss");
         Updater.get().start(this);
         mResult = Result.empty();
@@ -496,8 +496,26 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             else if (Setting.getHomeMenuKey() == 7) KeepActivity.start(this);
             else if (Setting.getHomeMenuKey() == 8) SettingActivity.start(this);
         }
-        if (!isHomeFragment && KeyUtil.isMenuKey(event)) updateFilter((Class) mAdapter.get(mBinding.pager.getCurrentItem()));
-        if (!isHomeFragment && KeyUtil.isBackKey(event) && event.isLongPress() && getFragment().goRoot()) setCoolDown();
+        if (!isHomeFragment && KeyUtil.isMenuKey(event))
+            updateFilter((Class) mAdapter.get(mBinding.pager.getCurrentItem()));
+        if (!isHomeFragment && KeyUtil.isBackKey(event) && event.isLongPress() && getFragment().goRoot())
+            setCoolDown();
+
+        int keyCode = event.getKeyCode();
+//        Notify.show(Integer.toString(keyCode));
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_TV:
+                LiveActivity.start(this);
+                break;
+            default:
+                if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
+                    LiveActivity.start(this);
+                } else if (keyCode >= KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= KeyEvent.KEYCODE_NUMPAD_9) {
+                    LiveActivity.start(this);
+                } else {
+                    break;
+                }
+        }
         return super.dispatchKeyEvent(event);
     }
 
