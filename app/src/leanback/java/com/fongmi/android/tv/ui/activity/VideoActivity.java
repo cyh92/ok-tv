@@ -272,7 +272,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     }
 
     private int getPlayer() {
-        return mHistory != null && mHistory.getPlayer() != -1 ? mHistory.getPlayer() : getSite().getPlayerType() != -1 ? getSite().getPlayerType() : Setting.getPlayer();
+        return mHistory != null && mHistory.getPlayer() != -1 ? mHistory.getPlayer() : Setting.getPlayer();
     }
 
     private int getScale() {
