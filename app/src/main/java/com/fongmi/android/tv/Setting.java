@@ -75,7 +75,7 @@ public class Setting {
     }
 
     public static int getPlayer() {
-        return Prefers.getInt("player", Players.IJK);
+        return Prefers.getInt("player", Players.EXO);
     }
 
     public static void putPlayer(int player) {
