@@ -31,7 +31,7 @@
 
     <include
         android:id="@+id/widget"
-        layout="@layout/view_widget_live"
+        layout="@layout/view_widget_live_new"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
