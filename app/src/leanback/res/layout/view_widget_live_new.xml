@@ -28,7 +28,19 @@
             android:textColor="@color/white"
             android:textSize="20sp"
             tools:text="CCTV-1" />
-
+        <TextView
+            android:id="@+id/size"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/title"
+            android:layout_alignStart="@+id/title"
+            android:shadowColor="@color/grey_900"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="1"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            tools:text="1920 x 1080" />
     </RelativeLayout>
 
     <LinearLayout
@@ -156,116 +168,241 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!--下方频道信息-->
-    <LinearLayout
+
+    <!--频道序号显示-->
+    <RelativeLayout
+        android:layout_gravity="bottom|center"
+        android:gravity="center_vertical"
         android:id="@+id/bottom"
-        android:layout_width="match_parent"
-        android:layout_height="160sp"
-        android:layout_gravity="bottom"
-        android:background="@drawable/shape_live_info"
-        android:gravity="bottom"
-        android:orientation="horizontal"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-
-        <ImageView
-            android:id="@+id/logo"
-            android:layout_width="300sp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginEnd="20dp"
-            android:layout_weight="1"
-            app:srcCompat="@drawable/img_logo_placeholder" />
+        android:paddingBottom="5dp"
+        android:layout_width="700sp"
+        android:layout_height="100sp">
+        <View
+            android:id="@+id/view_bg"
+            android:background="@drawable/shape_user_focus"
+            android:layout_width="wrap_content"
+            android:layout_height="90sp"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true" />
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/channelin"
+            android:layout_width="170sp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:paddingTop="10sp"
-            android:paddingBottom="10sp">
-
-            <LinearLayout
-                android:id="@+id/ll_line1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:paddingBottom="10sp">
-
-                <TextView
-                    android:id="@+id/number"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
-                    android:textColor="@color/white"
-                    android:textSize="30sp"
-                    android:textStyle="bold"
-                    tools:text="005" />
-
-                <TextView
-                    android:id="@+id/name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
-                    android:singleLine="true"
-                    android:textColor="@color/white"
-                    android:textSize="30sp"
-                    android:textStyle="bold"
-                    tools:text="民視" />
-
-                <TextView
-                    android:id="@+id/size"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/title"
-                    android:layout_alignStart="@+id/title"
-                    android:layout_marginStart="60dp"
-                    android:shadowColor="@color/grey_900"
-                    android:shadowDx="2"
-                    android:shadowDy="2"
-                    android:shadowRadius="1"
-                    android:textColor="@color/white"
-                    android:textSize="20sp"
-                    tools:text="1920 x 1080" />
-
-                <TextView
-                    android:id="@+id/line"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:textColor="@color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    tools:text="线路 1" />
-
-                <TextView
-                    android:id="@+id/clock"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20sp"
-                    android:textColor="@color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    tools:text="16:50" />
-            </LinearLayout>
-
+            android:layout_marginStart="4sp"
+            android:layout_marginLeft="4sp"
+            android:layout_marginEnd="4sp"
+            android:layout_marginRight="4sp"
+            android:layout_gravity="bottom"
+            android:orientation="vertical">
             <TextView
-                android:id="@+id/play"
-                android:layout_width="match_parent"
+                android:id="@+id/number"
+                android:layout_width="130sp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
-                android:layout_weight="1"
+                android:layout_above="@+id/view_line"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentTop="true"
+                android:layout_gravity="center"
+                android:layout_marginLeft="13sp"
+                android:layout_marginTop="4sp"
+                android:layout_marginBottom="-14sp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:shadowColor="#CC000000"
+                android:shadowDx="5.0"
+                android:shadowRadius="5.0"
                 android:singleLine="true"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                tools:text="正在播放：食神" />
+                android:text="10"
+                android:visibility="gone"
+                android:textColor="#ffffffff"
+                android:textSize="80sp"
+                android:textStyle="bold" />
+            <FrameLayout
+                android:layout_width="140sp"
+                android:layout_height="50sp"
+                android:layout_marginStart="8sp"
+                android:layout_marginLeft="8sp"
+                android:layout_marginEnd="8sp"
+                android:layout_marginRight="8sp"
+                android:layout_marginTop="8sp"
+                android:layout_gravity="center"
+                >
+                <FrameLayout
+                    android:id="@+id/live_icon_null_bg"
+                    android:layout_width="80sp"
+                    android:layout_height="40sp"
+                    android:layout_gravity="center">
+                </FrameLayout>
+                <TextView
+                    android:id="@+id/live_icon_null_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize='marquee'
+                    android:singleLine="true"
+                    android:textColor="@android:color/white"
+                    android:textSize="40sp"
+                    android:textStyle="bold"
+                    tools:ignore="EllipsizeMaxLines" />
+
+                <ImageView
+                    android:id="@+id/logo"
+                    android:layout_width="150dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/img_logo_placeholder"
+                    app:srcCompat="@drawable/img_logo_placeholder" />
+
+            </FrameLayout>
+            <com.fongmi.android.tv.ui.custom.MarqueeTextView
+                android:id="@+id/name"
+                android:layout_width="150sp"
+                android:layout_height="wrap_content"
+                android:layout_alignStart="@+id/number"
+                android:layout_alignLeft="@+id/number"
+                android:layout_alignEnd="@+id/number"
+                android:layout_alignRight="@+id/number"
+
+                android:layout_alignParentBottom="true"
+                android:layout_gravity="center|bottom"
+                android:layout_marginStart="5sp"
+                android:layout_marginLeft="5sp"
+                android:layout_marginEnd="5sp"
+                android:layout_marginRight="5sp"
+                android:layout_marginTop="0sp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:paddingTop="0sp"
+                android:singleLine="true"
+                android:text="CCTV 高清"
+                android:textColor="#ffffffff"
+                android:textSize="25sp" />
 
         </LinearLayout>
-    </LinearLayout>
+        <TextView
+            android:id="@+id/tv_current_program"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/view_bg"
+            android:layout_marginLeft="0sp"
+            android:layout_marginTop="30sp"
+            android:layout_toRightOf="@+id/channelin"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:textSize="22sp"
+            android:textColor="#ffffffff"
+            android:ellipsize="marquee"
+            android:id="@+id/play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="暂无信息"
+            android:singleLine="true"
+            android:layout_toRightOf="@+id/tv_current_program"
+            android:layout_alignTop="@+id/tv_current_program" />
 
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:id="@+id/tv_current_program_name"
+            android:layout_width="300sp"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/tv_current_program"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginStart="10sp"
+            android:layout_marginLeft="10sp"
+            android:layout_marginEnd="15sp"
+            android:layout_marginRight="15sp"
+            android:layout_toRightOf="@+id/play"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:paddingRight="15sp"
+            android:singleLine="true"
+            android:text=""
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+        <View
+            android:id="@+id/view_line"
+            android:background="#ffffffff"
+            android:layout_width="wrap_content"
+            android:layout_height="1sp"
+            android:layout_marginTop="10sp"
+            android:layout_alignLeft="@+id/tv_current_program"
+            android:layout_alignBottom="@+id/tv_current_program_name" />
+        <TextView
+            android:textSize="20sp"
+            android:textColor="#ffffffff"
+            android:id="@+id/tv_next_program"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8sp"
+            android:text=""
+            android:layout_alignLeft="@+id/tv_current_program"
+            android:layout_alignBottom="@+id/view_line"
+            android:layout_alignParentBottom="true" />
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:textSize="22sp"
+            android:textColor="#ffffffff"
+            android:id="@+id/tv_next_program_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="暂无信息"
+            android:singleLine="true"
+            android:ellipsize="marquee"
+            android:layout_toRightOf="@+id/tv_next_program"
+            android:layout_alignTop="@+id/tv_next_program" />
+
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:id="@+id/tv_next_program_name"
+            android:layout_width="300sp"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/tv_next_program"
+            android:layout_alignEnd="@+id/tv_current_program_name"
+            android:layout_alignRight="@+id/tv_current_program_name"
+            android:layout_marginStart="20sp"
+            android:layout_marginLeft="20sp"
+            android:layout_marginEnd="0sp"
+            android:layout_marginRight="0sp"
+            android:layout_toRightOf="@+id/tv_next_program_time"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:paddingRight="15sp"
+            android:singleLine="true"
+            android:text=""
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/line"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/view_bg"
+            android:layout_marginRight="100sp"
+            android:layout_marginTop="8sp"
+            android:layout_marginBottom="8sp"
+            android:layout_alignParentRight="true"
+            android:text="源 1/1"
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/view_bg"
+            android:layout_marginRight="15sp"
+            android:layout_marginTop="8sp"
+            android:layout_marginBottom="8sp"
+            android:layout_alignParentRight="true"
+            android:textSize="20sp"
+            android:textColor="#ffffffff"
+            android:textStyle="bold"
+            tools:text="16:50" />
+    </RelativeLayout>
     <LinearLayout
         android:id="@+id/epg"
         android:layout_width="wrap_content"
