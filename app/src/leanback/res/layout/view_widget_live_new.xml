@@ -176,7 +176,8 @@
         android:id="@+id/bottom"
         android:paddingBottom="5dp"
         android:layout_width="700sp"
-        android:layout_height="100sp">
+        android:layout_height="100sp"
+        android:visibility="gone">
         <View
             android:id="@+id/view_bg"
             android:background="@drawable/shape_user_focus"
@@ -407,7 +408,8 @@
         android:id="@+id/epg"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:background="@drawable/shape_live_list"
+        android:background="@drawable/bg_channel_list"
+        android:layout_margin="20dp"
         android:orientation="vertical"
         android:visibility="gone"
         tools:visibility="visible">
