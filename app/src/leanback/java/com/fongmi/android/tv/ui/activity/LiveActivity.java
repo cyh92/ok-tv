@@ -291,7 +291,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         // setPosition(LiveConfig.get().find(items));
          //加载所有分组(包括带密码的)
         List<Group> items = live.getGroups();
-        mGroupAdapter.addAll(items);
+         mGroupAdapter.setItems(items, null);
         setPosition(LiveConfig.get().find(items));
     }
 
