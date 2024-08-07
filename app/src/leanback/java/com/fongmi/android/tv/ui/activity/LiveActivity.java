@@ -651,8 +651,8 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
 
     private void setInfo() {
         mViewModel.getEpg(mChannel);
-        mBinding.widget.play.setText("");
-//        mChannel.loadLogo(mBinding.widget.logo);
+        // mBinding.widget.play.setText("");
+        mChannel.loadLogo(mBinding.widget.logo);
         mBinding.widget.name.setText(mChannel.getName());
         mBinding.widget.title.setText(mChannel.getName());
         mBinding.display.title.setText(mChannel.getName());
