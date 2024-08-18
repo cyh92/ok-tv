@@ -38,6 +38,7 @@ import com.fongmi.android.tv.databinding.ActivityLiveBinding;
 import com.fongmi.android.tv.event.ActionEvent;
 import com.fongmi.android.tv.event.ErrorEvent;
 import com.fongmi.android.tv.event.PlayerEvent;
+import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.impl.LiveCallback;
 import com.fongmi.android.tv.impl.PassCallback;
@@ -289,8 +290,14 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
     }
 
     private void setGroup(Live live) {
-        List<Group> items = new ArrayList<>();
-        for (Group group : live.getGroups()) (group.isHidden() ? mHides : items).add(group);
+//        for (Group group : live.getGroups()) (group.isHidden() ? mHides : items).add(group);
+//        List<Group> items = new ArrayList<>();
+//        for (Group group : live.getGroups()) (group.isHidden() ? mHides : items).add(group);
+//        mGroupAdapter.setItems(items, null);
+//        setPosition(LiveConfig.get().find(items));
+
+//        加载所有分组(包括带密码的)
+        List<Group> items = live.getGroups();
         mGroupAdapter.setItems(items, null);
         setPosition(LiveConfig.get().find(items));
     }

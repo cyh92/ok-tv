@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <RelativeLayout
+        android:id="@+id/top"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:letterSpacing="0.02"
+            android:shadowColor="@color/grey_900"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="1"
+            android:singleLine="true"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            tools:text="CCTV-11" />
+
+        <TextView
+            android:id="@+id/size"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/title"
+            android:layout_alignStart="@+id/title"
+            android:layout_marginTop="16sp"
+            android:layout_marginEnd="16sp"
+            android:shadowColor="@color/grey_900"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="1"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            tools:text="1920 x 1080" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <include layout="@layout/view_progress" />
+
+        <TextView
+            android:id="@+id/traffic"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:visibility="gone"
+            tools:text="120KB/s" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/error"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/shape_widget"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ImageView
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_error" />
+
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            tools:text="@string/error_play_url" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/digital"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:includeFontPadding="false"
+        android:letterSpacing="0.05"
+        android:shadowColor="@color/grey_900"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="1"
+        android:textColor="@color/white"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        tools:text="05"
+        tools:visibility="visible" />
+
+    <LinearLayout
+        android:id="@+id/center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/shape_widget"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/action"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_play" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/exo_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                tools:text="00:00:00" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:text="/"
+                android:textColor="@color/white"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/exo_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                tools:text="00:00:00" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+
+    <!--频道序号显示-->
+    <RelativeLayout
+        android:id="@+id/bottom"
+        android:layout_width="700sp"
+        android:layout_height="100sp"
+        android:layout_gravity="bottom|center"
+        android:gravity="center_vertical"
+        android:paddingBottom="5dp"
+        android:visibility="gone">
+
+        <View
+            android:id="@+id/view_bg"
+            android:layout_width="wrap_content"
+            android:layout_height="90sp"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/shape_user_focus" />
+
+        <LinearLayout
+            android:id="@+id/channelin"
+            android:layout_width="170sp"
+            android:layout_height="match_parent"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="4sp"
+            android:layout_marginLeft="4sp"
+            android:layout_marginEnd="4sp"
+            android:layout_marginRight="4sp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/number"
+                android:layout_width="130sp"
+                android:layout_height="wrap_content"
+                android:layout_above="@+id/view_line"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentTop="true"
+                android:layout_gravity="center"
+                android:layout_marginLeft="13sp"
+                android:layout_marginTop="4sp"
+                android:layout_marginBottom="-14sp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:shadowColor="#CC000000"
+                android:shadowDx="5.0"
+                android:shadowRadius="5.0"
+                android:singleLine="true"
+                android:text="10"
+                android:textColor="#ffffffff"
+                android:textSize="80sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <FrameLayout
+                android:layout_width="140sp"
+                android:layout_height="50sp"
+                android:layout_gravity="center"
+                android:layout_marginStart="8sp"
+                android:layout_marginLeft="8sp"
+                android:layout_marginTop="8sp"
+                android:layout_marginEnd="8sp"
+                android:layout_marginRight="8sp">
+
+                <FrameLayout
+                    android:id="@+id/live_icon_null_bg"
+                    android:layout_width="80sp"
+                    android:layout_height="40sp"
+                    android:layout_gravity="center"></FrameLayout>
+
+                <TextView
+                    android:id="@+id/live_icon_null_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:ellipsize='marquee'
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:textColor="@android:color/white"
+                    android:textSize="40sp"
+                    android:textStyle="bold"
+                    tools:ignore="EllipsizeMaxLines" />
+
+                <ImageView
+                    android:id="@+id/logo"
+                    app:srcCompat="@drawable/img_logo_placeholder"
+                    android:layout_width="150dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/img_logo_placeholder" />
+
+            </FrameLayout>
+
+            <com.fongmi.android.tv.ui.custom.MarqueeTextView
+                android:id="@+id/name"
+                android:layout_width="150sp"
+                android:layout_height="wrap_content"
+                android:layout_alignStart="@+id/number"
+                android:layout_alignLeft="@+id/number"
+                android:layout_alignEnd="@+id/number"
+                android:layout_alignRight="@+id/number"
+
+                android:layout_alignParentBottom="true"
+                android:layout_gravity="center|bottom"
+                android:layout_marginStart="5sp"
+                android:layout_marginLeft="5sp"
+                android:layout_marginTop="0sp"
+                android:layout_marginEnd="5sp"
+                android:layout_marginRight="5sp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:paddingTop="0sp"
+                android:singleLine="true"
+                android:text="CCTV 高清"
+                android:textColor="#ffffffff"
+                android:textSize="25sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_current_program"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/view_bg"
+            android:layout_marginLeft="0sp"
+            android:layout_marginTop="30sp"
+            android:layout_toRightOf="@+id/channelin"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:id="@+id/play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/tv_current_program"
+            android:layout_toRightOf="@+id/tv_current_program"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:text="暂无信息"
+            android:textColor="#ffffffff"
+            android:textSize="22sp" />
+
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:id="@+id/tv_current_program_name"
+            android:layout_width="300sp"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/tv_current_program"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginStart="10sp"
+            android:layout_marginLeft="10sp"
+            android:layout_marginEnd="15sp"
+            android:layout_marginRight="15sp"
+            android:layout_toRightOf="@+id/play"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:paddingRight="15sp"
+            android:singleLine="true"
+            android:text=""
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+
+        <View
+            android:id="@+id/view_line"
+            android:layout_width="wrap_content"
+            android:layout_height="1sp"
+            android:layout_alignLeft="@+id/tv_current_program"
+            android:layout_alignBottom="@+id/tv_current_program_name"
+            android:layout_marginTop="10sp"
+            android:background="#ffffffff" />
+
+        <TextView
+            android:id="@+id/tv_next_program"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignLeft="@+id/tv_current_program"
+            android:layout_alignBottom="@+id/view_line"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="8sp"
+            android:text=""
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:id="@+id/tv_next_program_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/tv_next_program"
+            android:layout_toRightOf="@+id/tv_next_program"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:text="暂无信息"
+            android:textColor="#ffffffff"
+            android:textSize="22sp" />
+
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:id="@+id/tv_next_program_name"
+            android:layout_width="300sp"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/tv_next_program"
+            android:layout_alignEnd="@+id/tv_current_program_name"
+            android:layout_alignRight="@+id/tv_current_program_name"
+            android:layout_marginStart="20sp"
+            android:layout_marginLeft="20sp"
+            android:layout_marginEnd="0sp"
+            android:layout_marginRight="0sp"
+            android:layout_toRightOf="@+id/tv_next_program_time"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:paddingRight="15sp"
+            android:singleLine="true"
+            android:text=""
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/line"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/view_bg"
+            android:layout_alignParentRight="true"
+            android:layout_marginTop="8sp"
+            android:layout_marginRight="100sp"
+            android:layout_marginBottom="8sp"
+            android:text="源 1/1"
+            android:textColor="#ffffffff"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/view_bg"
+            android:layout_alignParentRight="true"
+            android:layout_marginTop="8sp"
+            android:layout_marginRight="15sp"
+            android:layout_marginBottom="8sp"
+            android:textColor="#ffffffff"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:text="16:50" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/epg"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_margin="20dp"
+        android:background="@drawable/bg_channel_list"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <androidx.leanback.widget.VerticalGridView
+            android:id="@+id/epg_data"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            tools:itemCount="5"
+            tools:listitem="@layout/adapter_epg_data" />
+
+    </LinearLayout>
+</FrameLayout>
