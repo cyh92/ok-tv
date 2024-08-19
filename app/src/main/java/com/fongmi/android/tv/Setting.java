@@ -463,7 +463,7 @@ public class Setting {
     }
 
     public static boolean isAggregatedSearch() {
-        return Prefers.getBoolean("aggregated_search", false);
+        return Prefers.getBoolean("aggregated_search", true);
     }
 
     public static void putAggregatedSearch(boolean search) {
@@ -495,7 +495,7 @@ public class Setting {
     }
 
     public static boolean isHomeHistory() {
-        return Prefers.getBoolean("home_history", true);
+        return Prefers.getBoolean("home_history", false);
     }
 
     public static void putHomeHistory(boolean show) {
@@ -535,7 +535,7 @@ public class Setting {
     }
 
     public static boolean isRemoveAd() {
-        return Prefers.getBoolean("remove_ad", false);
+        return Prefers.getBoolean("remove_ad", true);
     }
 
     public static void putRemoveAd(boolean remove) {
