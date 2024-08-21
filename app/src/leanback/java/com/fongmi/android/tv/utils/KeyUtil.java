@@ -35,4 +35,8 @@ public class KeyUtil {
     public static boolean isMenuKey(KeyEvent event) {
         return event.getAction() == KeyEvent.ACTION_UP && event.getKeyCode() == KeyEvent.KEYCODE_MENU;
     }
+
+    public static boolean isLiveKey(KeyEvent event) {
+        return event.getKeyCode() == KeyEvent.KEYCODE_TV || isDigitKey(event);
+    }
 }

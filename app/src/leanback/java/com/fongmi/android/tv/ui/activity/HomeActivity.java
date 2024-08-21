@@ -520,6 +520,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         }
         if (!isHomeFragment && KeyUtil.isMenuKey(event)) updateFilter((Class) mAdapter.get(mBinding.pager.getCurrentItem()));
         if (!isHomeFragment && KeyUtil.isBackKey(event) && event.isLongPress() && getFragment().goRoot()) setCoolDown();
+        //在首页按任意数字键进入直播页
+        if (isHomeFragment && KeyUtil.isLiveKey(event))LiveActivity.start(this);
         return super.dispatchKeyEvent(event);
     }
 
