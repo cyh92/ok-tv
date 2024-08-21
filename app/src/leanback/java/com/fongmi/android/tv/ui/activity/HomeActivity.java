@@ -500,22 +500,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             updateFilter((Class) mAdapter.get(mBinding.pager.getCurrentItem()));
         if (!isHomeFragment && KeyUtil.isBackKey(event) && event.isLongPress() && getFragment().goRoot())
             setCoolDown();
-
-        int keyCode = event.getKeyCode();
-//        Notify.show(Integer.toString(keyCode));
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_TV:
-                LiveActivity.start(this);
-                break;
-            default:
-                if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
-                    LiveActivity.start(this);
-                } else if (keyCode >= KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= KeyEvent.KEYCODE_NUMPAD_9) {
-                    LiveActivity.start(this);
-                } else {
-                    break;
-                }
-        }
+        //在首页按任意数字键进入直播页
+        if (isHomeFragment && KeyUtil.isLiveKey(event))LiveActivity.start(this);
         return super.dispatchKeyEvent(event);
     }
 
