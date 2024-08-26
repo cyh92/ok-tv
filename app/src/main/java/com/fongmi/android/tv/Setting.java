@@ -227,7 +227,7 @@ public class Setting {
     }
 
     public static boolean isInvert() {
-        return Prefers.getBoolean("invert");
+        return Prefers.getBoolean("invert",true);
     }
 
     public static void putInvert(boolean invert) {
