@@ -672,8 +672,10 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         String epg = mChannel.getData().getEpg();
         if (epg.length() > 0) mBinding.widget.name.setMaxEms(12);
         mEpgDataAdapter.setItems(mChannel.getData().getList(), null);
-//        mBinding.widget.tv_current_program_time.setText("正在播放");
-        mBinding.widget.play.setText(epg);
+        // mBinding.widget.play.setText(epg);
+        mBinding.widget.tvCurrentProgramName.setText(epg);
+        String nextEpg=mChannel.getData().getNextEpg();
+        if(!nextEpg.isEmpty())mBinding.widget.tvNextProgramName.setText(nextEpg);
         setWidth(mChannel.getData());
     }
 

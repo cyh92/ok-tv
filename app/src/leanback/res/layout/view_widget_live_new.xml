@@ -292,38 +292,27 @@
             android:layout_marginTop="30sp"
             android:layout_toRightOf="@+id/channelin"
             android:gravity="center"
-            android:text=""
+            android:text="当前节目:"
             android:textColor="#ffffffff"
             android:textSize="20sp" />
-        <com.fongmi.android.tv.ui.custom.MarqueeTextView
-            android:textSize="22sp"
-            android:textColor="#ffffffff"
-            android:ellipsize="marquee"
-            android:id="@+id/play"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="暂无信息"
-            android:singleLine="true"
-            android:layout_toRightOf="@+id/tv_current_program"
-            android:layout_alignTop="@+id/tv_current_program" />
 
         <com.fongmi.android.tv.ui.custom.MarqueeTextView
             android:id="@+id/tv_current_program_name"
             android:layout_width="300sp"
             android:layout_height="wrap_content"
             android:layout_alignTop="@+id/tv_current_program"
+            android:layout_toRightOf="@+id/tv_current_program"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
             android:layout_marginStart="10sp"
             android:layout_marginLeft="10sp"
             android:layout_marginEnd="15sp"
             android:layout_marginRight="15sp"
-            android:layout_toRightOf="@+id/play"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"
             android:paddingRight="15sp"
             android:singleLine="true"
-            android:text=""
+            android:text="暂无信息"
             android:textColor="#ffffffff"
             android:textSize="20sp" />
         <View
@@ -341,39 +330,28 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8sp"
-            android:text=""
+            android:text="下一节目:"
             android:layout_alignLeft="@+id/tv_current_program"
             android:layout_alignBottom="@+id/view_line"
-            android:layout_alignParentBottom="true" />
-        <com.fongmi.android.tv.ui.custom.MarqueeTextView
-            android:textSize="22sp"
-            android:textColor="#ffffffff"
-            android:id="@+id/tv_next_program_time"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="暂无信息"
-            android:singleLine="true"
-            android:ellipsize="marquee"
-            android:layout_toRightOf="@+id/tv_next_program"
-            android:layout_alignTop="@+id/tv_next_program" />
+            android:layout_alignParentBottom="true" />       
 
         <com.fongmi.android.tv.ui.custom.MarqueeTextView
             android:id="@+id/tv_next_program_name"
             android:layout_width="300sp"
             android:layout_height="wrap_content"
             android:layout_alignTop="@+id/tv_next_program"
+            android:layout_toRightOf="@+id/tv_next_program"
             android:layout_alignEnd="@+id/tv_current_program_name"
             android:layout_alignRight="@+id/tv_current_program_name"
-            android:layout_marginStart="20sp"
+            android:layout_marginStart="10sp"
             android:layout_marginLeft="20sp"
             android:layout_marginEnd="0sp"
             android:layout_marginRight="0sp"
-            android:layout_toRightOf="@+id/tv_next_program_time"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"
             android:paddingRight="15sp"
             android:singleLine="true"
-            android:text=""
+            android:text="暂无信息"
             android:textColor="#ffffffff"
             android:textSize="20sp" />
 
