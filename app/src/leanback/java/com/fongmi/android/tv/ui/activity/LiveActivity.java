@@ -679,7 +679,10 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         String epg = mChannel.getData().getEpg();
         if (epg.length() > 0) mBinding.widget.name.setMaxEms(12);
         mEpgDataAdapter.setItems(mChannel.getData().getList(), null);
-        mBinding.widget.play.setText(epg);
+//        mBinding.widget.play.setText(epg);
+        mBinding.widget.tvCurrentProgramName.setText(epg);
+        String nextEpg=mChannel.getData().getNextEpg();
+        if(!nextEpg.isEmpty())mBinding.widget.tvNextProgramName.setText(nextEpg);
         setWidth(mChannel.getData());
         setMetadata();
     }
@@ -816,7 +819,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
 
     private void setMetadata() {
         String title = mBinding.widget.name.getText().toString();
-        String artist = mBinding.widget.play.getText().toString();
+        String artist = mBinding.widget.tvCurrentProgramName.getText().toString();
         mPlayers.setMetadata(title, artist, mChannel.getLogo(), getDefaultArtwork());
     }
 
