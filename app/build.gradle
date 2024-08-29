@@ -11,8 +11,8 @@ android {
         minSdk 16
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 247
-        versionName "2.4.7"
+        versionCode 250
+        versionName "2.5.0"
         multiDexEnabled true
         ndk { abiFilters "armeabi-v7a" }
         javaCompileOptions {
