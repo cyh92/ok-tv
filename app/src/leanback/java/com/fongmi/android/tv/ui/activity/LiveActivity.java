@@ -303,7 +303,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
     }
 
     private Group setWidth(Group group) {
-        int logo = ResUtil.dp2px(60);
+        int logo = 0;// ResUtil.dp2px(60); 左侧频道列表宽度减去原logog占位
         int padding = ResUtil.dp2px(60);
         if (group.isKeep()) group.setWidth(0);
         if (group.getWidth() == 0) for (Channel item : group.getChannel()) group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
@@ -674,8 +674,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         mEpgDataAdapter.setItems(mChannel.getData().getList(), null);
         // mBinding.widget.play.setText(epg);
         mBinding.widget.tvCurrentProgramName.setText(epg);
-        String nextEpg=mChannel.getData().getNextEpg();
-        if(!nextEpg.isEmpty())mBinding.widget.tvNextProgramName.setText(nextEpg);
+        mBinding.widget.tvNextProgramName.setText(nextProgram());
         setWidth(mChannel.getData());
     }
 
@@ -887,6 +886,16 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         boolean limit = position > mEpgDataAdapter.size() - 1;
         if (!limit) onItemClick(mChannel.getData().getList().get(position));
         else nextChannel();
+    }
+
+    //下一节目
+    public String nextProgram(){
+        int position = mChannel.getData().getSelected() + 1;
+        String res="暂无信息";
+        boolean limit = position > mEpgDataAdapter.size() - 1;
+        if (!limit)
+            res= mChannel.getData().getList().get(position).format();
+        return res;
     }
 
     private void prevLine() {

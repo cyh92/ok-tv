@@ -36,7 +36,7 @@ public class ChannelPresenter extends Presenter {
     public void onBindViewHolder(Presenter.ViewHolder viewHolder, Object object) {
         Channel item = (Channel) object;
         ViewHolder holder = (ViewHolder) viewHolder;
-        item.loadLogo(holder.binding.logo);
+        //item.loadLogo(holder.binding.logo);//去掉频道名称前logo显示
         holder.binding.name.setText(item.getName());
         holder.binding.number.setText(item.getNumber());
         holder.binding.getRoot().setSelected(item.isSelected());
