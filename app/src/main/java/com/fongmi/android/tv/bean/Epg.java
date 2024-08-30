@@ -93,11 +93,6 @@ public class Epg {
         return "";
     }
 
-    public String getNextEpg() {
-        for (int i = 0; i < getList().size(); i++) if (getList().get(i).isSelected()) return getList().get(i+1).format();
-        return "";
-    }
-
     public Epg selected() {
         for (EpgData item : getList()) item.setSelected(item.isInRange());
         return this;
