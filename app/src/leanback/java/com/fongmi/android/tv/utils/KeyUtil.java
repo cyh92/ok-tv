@@ -37,6 +37,6 @@ public class KeyUtil {
     }
 
     public static boolean isLiveKey(KeyEvent event) {
-        return event.getKeyCode() == KeyEvent.KEYCODE_TV || isDigitKey(event);
+        return event.getKeyCode() == KeyEvent.KEYCODE_UNKNOWN || isDigitKey(event);
     }
 }
