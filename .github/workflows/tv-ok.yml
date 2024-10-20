@@ -51,10 +51,12 @@ jobs:
           path: ${{ github.workspace }}/apk/*
     
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: ok-tv_release
           tag_name: release
+          draft: false
+          prerelease: false
           body_path: ${{ github.workspace }}/README.md
           files: ${{ github.workspace }}/apk/*
         env:
