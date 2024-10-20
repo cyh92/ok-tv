@@ -56,4 +56,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: com.fongmi.android.tv
-          path: ${{ github.workspace }}/apk/*
+          path: ${{ github.workspace }}/apk
