@@ -42,7 +42,7 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/apk/
           #find . -name "*.apk" -exec mv {} ${{ github.workspace }}/apk/ \;
-          tree ${{ github.workspace }}/app
+          tree ${{ github.workspace }}
           cp -rf ${{ github.workspace }}/app/leanbackJavaArm64_v8a/release/*.apk ${{ github.workspace }}/apk/release
           cp -rf ${{ github.workspace }}/app/leanbackJavaArmeabi_v7a/release/*.apk ${{ github.workspace }}/apk/release
           cp -rf ${{ github.workspace }}/app/leanbackPythonArm64_v8a/release/*.apk ${{ github.workspace }}/apk/release
