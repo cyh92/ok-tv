@@ -49,3 +49,13 @@ jobs:
         with:
           name: com.fongmi.android.tv
           path: ${{ github.workspace }}/apk/*
+    
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ok-tv
+          tag_name: ok-tv
+          body_path: ${{ github.workspace }}/CHANGELOG.md
+          files: ${{ github.workspace }}/apk/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      
