@@ -41,7 +41,15 @@ jobs:
       - name: Prepare App
         run: |
           mkdir -p ${{ github.workspace }}/apk/
-          find . -name "*.apk" -exec mv {} ${{ github.workspace }}/apk/ \;
+          #find . -name "*.apk" -exec mv {} ${{ github.workspace }}/apk/ \;
+          cp -rf ${{ github.workspace }}/app/leanbackJavaArm64_v8a/release\*.apk ${{ github.workspace }}/apk/release
+          cp -rf ${{ github.workspace }}/app/leanbackJavaArmeabi_v7a/release\*.apk ${{ github.workspace }}/apk/release
+          cp -rf ${{ github.workspace }}/app/leanbackPythonArm64_v8a/release\*.apk ${{ github.workspace }}/apk/release
+          cp -rf ${{ github.workspace }}/app/leanbackPythonArmeabi_v7a/release\*.apk ${{ github.workspace }}/apk/release
+          cp -rf ${{ github.workspace }}/app/mobileJavaArm64_v8a/release\*.apk ${{ github.workspace }}/apk/release
+          cp -rf ${{ github.workspace }}/app/mobileJavaArmeabi_v7a/release\*.apk ${{ github.workspace }}/apk/release
+          cp -rf ${{ github.workspace }}/app/mobilePythonArm64_v8a/release\*.apk ${{ github.workspace }}/apk/release
+          cp -rf ${{ github.workspace }}/app/mobilePythonArmeabi_v7a/release\*.apk ${{ github.workspace }}/apk/release
 
       - name: Upload App To Artifact
         uses: actions/upload-artifact@v4
