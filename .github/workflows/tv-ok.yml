@@ -53,8 +53,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ok-tv
-          tag_name: ok-tv
+          name: ok-tv_release
+          tag_name: release
           body_path: ${{ github.workspace }}/CHANGELOG.md
           files: ${{ github.workspace }}/apk/*
         env:
