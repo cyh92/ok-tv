@@ -55,7 +55,7 @@ jobs:
         with:
           name: ok-tv_release
           tag_name: release
-          body_path: ${{ github.workspace }}/CHANGELOG.md
+          body_path: release.txt
           files: ${{ github.workspace }}/apk/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      
