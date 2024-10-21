@@ -22,11 +22,11 @@ jobs:
 
       - name: Release Apk Sign
         run: |
-          cp -f ${{ github.workspace }}/.github/workflows/xxtv.jks app/xxtv.jks
-          sed -i '$a\RELEASE_STORE_FILE=./xxtv.jks'     ./gradle.properties
-          sed -i '$a\RELEASE_KEY_ALIAS=key0'            ./gradle.properties
-          sed -i '$a\RELEASE_STORE_PASSWORD=123456'       ./gradle.properties
-          sed -i '$a\RELEASE_KEY_PASSWORD=123456'         ./gradle.properties
+          cp -f ${{ github.workspace }}/.github/workflows/xxtv.jks ${{ github.workspace }}/app/xxtv.jks
+          sed -i '$a\RELEASE_STORE_FILE=./xxtv.jks'     ${{ github.workspace }}/gradle.properties
+          sed -i '$a\RELEASE_KEY_ALIAS=key0'            ${{ github.workspace }}/gradle.properties
+          sed -i '$a\RELEASE_STORE_PASSWORD=123456'       ${{ github.workspace }}/gradle.properties
+          sed -i '$a\RELEASE_KEY_PASSWORD=123456'         ${{ github.workspace }}/gradle.properties
 
       - name: Build With Gradle
         run: |
