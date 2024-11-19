@@ -171,7 +171,7 @@ public class Setting {
     }
 
     public static int getEpisode() {
-        return Prefers.getInt("episode");
+        return Prefers.getInt("episode",1);
     }
 
     public static void putEpisode(int episode) {
