@@ -122,8 +122,11 @@ public class VodConfig {
         try {
             checkJson(Json.parse(Decoder.getJson(config.getUrl())).getAsJsonObject(), callback);
         } catch (Throwable e) {
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
-            else loadCache(callback, e);
+            if (TextUtils.isEmpty(config.getUrl())) {
+                App.post(() -> callback.error("内置源未启用，请对设置->点播参数项重新编辑并确定"));
+                String url = "https://gitee.com/cyh92/StaticPage/raw/master/tvbox/TVDC.txt";
+                config.setUrl(url);
+            } else loadCache(callback, e);
             e.printStackTrace();
         }
     }
