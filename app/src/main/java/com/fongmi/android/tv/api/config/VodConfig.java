@@ -114,8 +114,11 @@ public class VodConfig {
             OkHttp.cancel("vod");
             checkJson(Json.parse(Decoder.getJson(UrlUtil.convert(config.getUrl()), "vod")).getAsJsonObject(), callback);
         } catch (Throwable e) {
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
-            else loadCache(callback, e);
+            if (TextUtils.isEmpty(config.getUrl())) {
+                App.post(() -> callback.error("内置源未启用，请对设置->点播参数项重新编辑并确定"));
+                String url = "http://cyh92.cn/TVDC.txt";
+                config.setUrl(url);
+            }else loadCache(callback, e);
             e.printStackTrace();
         }
     }
