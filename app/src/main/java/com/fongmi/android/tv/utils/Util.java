@@ -177,4 +177,11 @@ public class Util {
             return Intent.createChooser(intent, null);
         }
     }
+    public static void restartApp(Activity activity) {
+        Intent intent = activity.getBaseContext().getPackageManager().getLaunchIntentForPackage(activity.getBaseContext().getPackageName());
+        ComponentName componentName = intent.getComponent();
+        Intent mainIntent = Intent.makeRestartActivityTask(componentName);
+        activity.startActivity(mainIntent);
+        Runtime.getRuntime().exit(0);
+    }
 }

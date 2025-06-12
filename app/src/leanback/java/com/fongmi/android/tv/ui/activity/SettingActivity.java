@@ -137,6 +137,7 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         mBinding.quality.setOnClickListener(this::setQuality);
         mBinding.size.setOnClickListener(this::setSize);
         mBinding.doh.setOnClickListener(this::setDoh);
+        mBinding.custom.setOnClickListener(this::onCustom);
     }
 
     @Override
@@ -273,6 +274,10 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
 
     private void onPlayer(View view) {
         SettingPlayerActivity.start(this);
+    }
+
+    private void onCustom(View view) {
+        SettingCustomActivity.start(this);
     }
 
     private void onVersion(View view) {

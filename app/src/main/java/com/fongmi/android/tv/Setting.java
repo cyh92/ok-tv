@@ -300,4 +300,12 @@ public class Setting {
     public static boolean hasCaption() {
         return new Intent(Settings.ACTION_CAPTIONING_SETTINGS).resolveActivity(App.get().getPackageManager()) != null;
     }
+
+    public static void putParseWebView(int key) {
+        Prefers.put("parse_webview", key);
+    }
+
+    public static int getParseWebView() {
+        return Prefers.getInt("parse_webview", 0);
+    }
 }

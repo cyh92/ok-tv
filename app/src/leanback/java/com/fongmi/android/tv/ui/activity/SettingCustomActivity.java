@@ -1,0 +1,74 @@
+package com.fongmi.android.tv.ui.activity;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.view.View;
+
+import androidx.viewbinding.ViewBinding;
+
+import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.Setting;
+import com.fongmi.android.tv.databinding.ActivitySettingCustomBinding;
+import com.fongmi.android.tv.impl.X5WebViewCallback;
+import com.fongmi.android.tv.ui.base.BaseActivity;
+import com.fongmi.android.tv.ui.dialog.X5WebViewDialog;
+import com.fongmi.android.tv.utils.Notify;
+import com.fongmi.android.tv.utils.Util;
+import com.tencent.smtt.sdk.QbSdk;
+
+public class SettingCustomActivity extends BaseActivity implements X5WebViewCallback {
+    private ActivitySettingCustomBinding mBinding;
+    private String[] parseWebview = {"系统", "X5 WebView"};
+
+    @Override
+    protected ViewBinding getBinding() {
+        return mBinding = ActivitySettingCustomBinding.inflate(getLayoutInflater());
+    }
+
+    public static void start(Activity activity) {
+        activity.startActivity(new Intent(activity, SettingCustomActivity.class));
+    }
+
+    @Override
+    protected void initView() {
+        mBinding.parseWebviewText.setText(parseWebview[Setting.getParseWebView()]);
+    }
+
+    @Override
+    protected void initEvent() {
+        mBinding.parseWebview.setOnClickListener(this::setParseWebview);
+    }
+
+    private void setParseWebview(View view) {
+        int index = Setting.getParseWebView();
+        int i= index == parseWebview.length - 1 ? 0 : ++index;
+        Setting.putParseWebView(i);
+        mBinding.parseWebviewText.setText(parseWebview[i]);
+
+        if (index == 1 && QbSdk.getTbsVersion(App.get()) <= 0) X5WebViewDialog.create(this).show();
+    }
+
+
+    @Override
+    public void onX5Success() {
+        int index = 1;
+        Setting.putParseWebView(index);
+        mBinding.parseWebviewText.setText(parseWebview[index]);
+        App.post(() -> Util.restartApp(this), 500);
+    }
+
+    @Override
+    public void onX5Error() {
+        int index = 0;
+        Setting.putParseWebView(index);
+        mBinding.parseWebviewText.setText(parseWebview[index]);
+    }
+
+    @Override
+    public void onX5Cancel() {
+        int index = 0;
+        Setting.putParseWebView(index);
+        mBinding.parseWebviewText.setText(parseWebview[index]);
+    }
+
+}

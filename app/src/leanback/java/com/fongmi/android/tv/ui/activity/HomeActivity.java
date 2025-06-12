@@ -58,6 +58,7 @@ import com.fongmi.android.tv.utils.FileChooser;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.Tbs;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.net.OkHttp;
 import com.google.common.collect.Lists;
@@ -100,6 +101,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         Updater.create().release().start(this);
         mResult = Result.empty();
         Server.get().start();
+        Tbs.init();
         setRecyclerView();
         setViewModel();
         setAdapter();
