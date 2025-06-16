@@ -451,6 +451,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (KeyUtil.isMenuKey(event)) showDialog();
+        if (KeyUtil.isLiveKey(event)) LiveActivity.start(this);
         return super.dispatchKeyEvent(event);
     }
 
