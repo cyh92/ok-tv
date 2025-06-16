@@ -592,7 +592,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void setInfo() {
         mViewModel.getEpg(mChannel);
-        mBinding.widget.play.setText("");
+//        mBinding.widget.play.setText("");
         mChannel.loadLogo(mBinding.widget.logo);
         mBinding.widget.title.setSelected(true);
         mBinding.widget.name.setText(mChannel.getName());
@@ -611,6 +611,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         if (hasTitle) mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getName(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
+        mBinding.widget.tvNextProgramName.setText(nextProgram());
         setWidth(mChannel.getData());
         setMetadata();
     }
@@ -810,7 +811,15 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         if (hasNext) onItemClick(mChannel.getData().getList().get(position));
         else fetch();
     }
-
+    //下一节目
+    public String nextProgram(){
+        int position = mChannel.getData().getSelected() + 1;
+        String res="暂无信息";
+        boolean limit = position > mEpgDataAdapter.size() - 1;
+        if (!limit)
+            res= mChannel.getData().getList().get(position).format();
+        return res;
+    }
     private void prevLine() {
         if (mChannel == null || mChannel.isOnly()) return;
         mChannel.prevLine();
@@ -918,14 +927,14 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Override
     public void onKeyUp() {
-        if (Setting.isInvert()) nextChannel();
-        else prevChannel();
+        if (Setting.isInvert()) prevChannel();
+        else nextChannel();
     }
 
     @Override
     public void onKeyDown() {
-        if (Setting.isInvert()) prevChannel();
-        else nextChannel();
+        if (Setting.isInvert()) nextChannel();
+        else prevChannel();
     }
 
     @Override
