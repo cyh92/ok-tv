@@ -216,13 +216,12 @@
                     android:ellipsize="marquee"
                     android:fontFamily="sans-serif"
                     android:gravity="left"
-                    android:paddingLeft="20dp"
+                    android:paddingLeft="10dp"
                     android:shadowColor="@color/white"
                     android:singleLine="true"
                     android:text="暂无信息"
                     android:textColor="@color/white"
-                    android:textSize="30sp"
-                    android:textStyle="bold"  />
+                    android:textSize="25dp" />
 
                 <TextView
                     android:id="@+id/clock"
@@ -235,7 +234,7 @@
                     android:shadowColor="@color/white"
                     android:text="00:00"
                     android:textColor="@android:color/white"
-                    android:textSize="30sp"
+                    android:textSize="25dp"
                     android:textStyle="normal"
                     android:visibility="visible" />
 
@@ -267,8 +266,7 @@
                     android:paddingRight="2dp"
                     android:paddingBottom="1dp"
                     android:textColor="@color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
+                    android:textSize="15sp"
                     android:visibility="visible"
                     tools:text="005" />
 
@@ -290,11 +288,9 @@
                     android:paddingRight="2dp"
                     android:paddingBottom="1dp"
                     android:shadowColor="@color/white"
-
                     android:text="民視 1"
                     android:textColor="@color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                    android:textSize="15sp" />
 
                 <TextView
                     android:id="@+id/size"
@@ -314,8 +310,7 @@
                     android:shadowColor="@color/white"
                     android:text="1920 x 1080"
                     android:textColor="@color/white"
-                    android:textSize="20dp"
-                    android:textStyle="bold" />
+                    android:textSize="15dp"/>
 
                 <TextView
                     android:id="@+id/line"
@@ -333,8 +328,7 @@
                     android:shadowColor="@color/white"
                     android:text="来源 1"
                     android:textColor="@color/white"
-                    android:textSize="20dp"
-                    android:textStyle="bold" />
+                    android:textSize="15dp" />
             </LinearLayout>
 
             <LinearLayout
@@ -359,7 +353,7 @@
                     android:singleLine="true"
                     android:text="暂无信息"
                     android:textColor="@color/white"
-                    android:textSize="25sp" />
+                    android:textSize="15sp" />
 
             </LinearLayout>
 
