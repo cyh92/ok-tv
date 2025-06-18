@@ -97,7 +97,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private int count;
 
     public static void start(Context context) {
-        if (!LiveConfig.isEmpty()) context.startActivity(new Intent(context, LiveActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("empty", false));
+        if (!LiveConfig.isEmpty())
+            context.startActivity(new Intent(context, LiveActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("empty", false));
     }
 
     private boolean isEmpty() {
@@ -175,7 +176,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         mBinding.group.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override
             public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
-                if (mGroupAdapter.size() > 0) onChildSelected(child, mGroup = (Group) mGroupAdapter.get(position));
+                if (mGroupAdapter.size() > 0)
+                    onChildSelected(child, mGroup = (Group) mGroupAdapter.get(position));
             }
         });
     }
@@ -262,7 +264,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void setWidth(Live live) {
         int padding = ResUtil.dp2px(48);
-        if (live.getWidth() == 0) for (Group item : live.getGroups()) live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
+        if (live.getWidth() == 0) for (Group item : live.getGroups())
+            live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
         mBinding.group.getLayoutParams().width = live.getWidth() == 0 ? 0 : Math.min(live.getWidth() + padding, ResUtil.getScreenWidth() / 4);
     }
 
@@ -270,7 +273,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         int logo = ResUtil.dp2px(60);
         int padding = ResUtil.dp2px(60);
         if (group.isKeep()) group.setWidth(0);
-        if (group.getWidth() == 0) for (Channel item : group.getChannel()) group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
+        if (group.getWidth() == 0) for (Channel item : group.getChannel())
+            group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
         mBinding.channel.getLayoutParams().width = group.getWidth() == 0 ? 0 : Math.min(group.getWidth() + padding, ResUtil.getScreenWidth() / 2);
         return group;
     }
@@ -279,7 +283,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         int padding = ResUtil.dp2px(48);
         if (epg.getList().isEmpty()) return;
         int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 16);
-        if (epg.getWidth() == 0) for (EpgData item : epg.getList()) epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
+        if (epg.getWidth() == 0) for (EpgData item : epg.getList())
+            epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
         mBinding.epgData.getLayoutParams().width = epg.getWidth() == 0 ? 0 : Math.min(Math.max(epg.getWidth(), minWidth) + padding, ResUtil.getScreenWidth() / 2);
     }
 
@@ -314,13 +319,15 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setActivated() {
-        for (int i = 0; i < mChannelAdapter.size(); i++) ((Channel) mChannelAdapter.get(i)).setSelected(mChannel);
+        for (int i = 0; i < mChannelAdapter.size(); i++)
+            ((Channel) mChannelAdapter.get(i)).setSelected(mChannel);
         notifyItemChanged(mBinding.channel, mChannelAdapter);
         fetch();
     }
 
     private void setActivated(EpgData item) {
-        for (int i = 0; i < mEpgDataAdapter.size(); i++) ((EpgData) mEpgDataAdapter.get(i)).setSelected(item);
+        for (int i = 0; i < mEpgDataAdapter.size(); i++)
+            ((EpgData) mEpgDataAdapter.get(i)).setSelected(item);
         notifyItemChanged(mBinding.epgData, mEpgDataAdapter);
     }
 
@@ -414,7 +421,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Override
     public void showEpg(Channel item) {
-        if (mChannel == null || mChannel.getData().getList().isEmpty() || mEpgDataAdapter.size() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup)) return;
+        if (mChannel == null || mChannel.getData().getList().isEmpty() || mEpgDataAdapter.size() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup))
+            return;
         mBinding.epgData.setSelectedPosition(mChannel.getData().getSelected());
         mBinding.epgData.setVisibility(View.VISIBLE);
         mBinding.channel.setVisibility(View.GONE);
@@ -608,7 +616,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         EpgData data = mChannel.getData().getEpgData();
         boolean hasTitle = !data.getTitle().isEmpty();
         mEpgDataAdapter.setItems(mChannel.getData().getList(), null);
-        if (hasTitle) mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getName(), data.getTitle()));
+        if (hasTitle)
+            mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getName(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
         mBinding.widget.tvNextProgramName.setText(nextProgram());
@@ -757,6 +766,9 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         mBinding.control.audio.setVisibility(mPlayers.haveTrack(C.TRACK_TYPE_AUDIO) ? View.VISIBLE : View.GONE);
         mBinding.control.video.setVisibility(mPlayers.haveTrack(C.TRACK_TYPE_VIDEO) ? View.VISIBLE : View.GONE);
         mBinding.control.speed.setVisibility(mPlayers.isVod() ? View.VISIBLE : View.GONE);
+
+        mBinding.control.seek.setVisibility(mPlayers.isLive() ? View.GONE : View.VISIBLE);
+        mBinding.control.action.setVisibility(mPlayers.isLive() ? View.GONE : View.VISIBLE);
     }
 
     private void setMetadata() {
@@ -811,15 +823,17 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         if (hasNext) onItemClick(mChannel.getData().getList().get(position));
         else fetch();
     }
+
     //下一节目
-    public String nextProgram(){
+    public String nextProgram() {
         int position = mChannel.getData().getSelected() + 1;
-        String res="暂无信息";
+        String res = "暂无信息";
         boolean limit = position > mEpgDataAdapter.size() - 1;
         if (!limit)
-            res= mChannel.getData().getList().get(position).format();
+            res = mChannel.getData().getList().get(position).format();
         return res;
     }
+
     private void prevLine() {
         if (mChannel == null || mChannel.isOnly()) return;
         mChannel.prevLine();

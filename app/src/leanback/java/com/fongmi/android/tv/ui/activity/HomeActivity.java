@@ -23,6 +23,7 @@ import com.bumptech.glide.request.target.Target;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
@@ -154,7 +155,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void setAdapter() {
         mAdapter.add(getFuncRow());
-        mAdapter.add(R.string.home_history);
+        if (Setting.isHomeHistory())mAdapter.add(R.string.home_history);
         mAdapter.add(R.string.home_recommend);
         mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
     }
@@ -237,6 +238,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         adapter.add(Func.create(R.string.home_keep));
         adapter.add(Func.create(R.string.home_push));
         adapter.add(Func.create(R.string.home_cast));
+        adapter.add(Func.create(R.string.home_history_short));
         adapter.add(Func.create(R.string.home_setting));
         return new ListRow(adapter);
     }
@@ -246,9 +248,21 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void getHistory(boolean renew) {
-        List<History> items = History.get();
         int historyIndex = getHistoryIndex();
         int recommendIndex = getRecommendIndex();
+        if (historyIndex == -1) {
+            if (!Setting.isHomeHistory()) return;
+            int historyStringIndex = recommendIndex - 1;
+            historyStringIndex = historyStringIndex < 0 ? 0 : historyStringIndex;
+            mAdapter.add(historyStringIndex, R.string.home_history);
+        }
+        if (!Setting.isHomeHistory()) {
+            mAdapter.removeItems(historyIndex - 1, 2);
+            return;
+        }
+        List<History> items = History.get();
+        historyIndex = getHistoryIndex();
+        recommendIndex = getRecommendIndex();
         boolean exist = recommendIndex - historyIndex == 2;
         if (renew) mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
         if ((items.isEmpty() && exist) || (renew && exist)) mAdapter.removeItems(historyIndex, 1);
@@ -388,6 +402,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 break;
             case R.string.home_cast:
                 CastActivity.start(this);
+                break;
+                case R.string.home_history_short:
+                HistoryActivity.start(this);
                 break;
             case R.string.home_setting:
                 SettingActivity.start(this);

@@ -20,6 +20,8 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
     private ActivitySettingCustomBinding mBinding;
     private String[] parseWebview = {"系统", "X5 WebView"};
 
+    private String[] historyText = {"开启", "关闭"};
+
     @Override
     protected ViewBinding getBinding() {
         return mBinding = ActivitySettingCustomBinding.inflate(getLayoutInflater());
@@ -32,13 +34,18 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
     @Override
     protected void initView() {
         mBinding.parseWebviewText.setText(parseWebview[Setting.getParseWebView()]);
+        mBinding.homeHistoryText.setText(Setting.isHomeHistory()? historyText[0] : historyText[1]);
     }
 
     @Override
     protected void initEvent() {
         mBinding.parseWebview.setOnClickListener(this::setParseWebview);
+        mBinding.homeHistory.setOnClickListener(this::setHomeHistory);
     }
-
+    private void setHomeHistory(View view) {
+        Setting.putHomeHistory(!Setting.isHomeHistory());
+        mBinding.homeHistoryText.setText(Setting.isHomeHistory()? historyText[0] : historyText[1]);
+    }
     private void setParseWebview(View view) {
         int index = Setting.getParseWebView();
         int i= index == parseWebview.length - 1 ? 0 : ++index;

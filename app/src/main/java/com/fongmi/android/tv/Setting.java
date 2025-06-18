@@ -308,4 +308,11 @@ public class Setting {
     public static int getParseWebView() {
         return Prefers.getInt("parse_webview", 0);
     }
+    public static boolean isHomeHistory() {
+        return Prefers.getBoolean("home_history", false);
+    }
+
+    public static void putHomeHistory(boolean show) {
+        Prefers.put("home_history", show);
+    }
 }
