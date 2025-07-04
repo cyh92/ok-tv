@@ -50,6 +50,8 @@ import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
 import com.fongmi.android.tv.ui.custom.CustomLiveListView;
+import com.fongmi.android.tv.ui.custom.CustomWebView;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog;
@@ -62,10 +64,17 @@ import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
+import com.orhanobut.logger.Logger;
+import com.tencent.smtt.sdk.WebView;
+import com.tencent.smtt.sdk.WebViewClient;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -95,6 +104,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private boolean redirect;
     private String tag;
     private int count;
+
+    private WebViewPlayer webPlayer;
 
     public static void start(Context context) {
         if (!LiveConfig.isEmpty())
@@ -129,6 +140,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Override
     protected void initView() {
+        webPlayer = findViewById(R.id.webview);
         mClock = Clock.create(mBinding.widget.clock);
         mKeyDown = CustomKeyDownLive.create(this);
         mPlayers = Players.create(this);
@@ -651,7 +663,51 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void start(Channel result) {
-        mPlayers.start(result, getTimeout());
+        if (result.getMode() == 1) {
+            showWebView(result);
+        } else {
+            webPlayer.stop();
+            webPlayer.setVisibility(View.GONE);
+            mBinding.exo.setVisibility(View.VISIBLE);
+            mPlayers.start(result, getTimeout());
+        }
+    }
+
+    // 显示WebView并加载URL
+    private void showWebView(Channel result) {
+        webPlayer.stop();
+        mBinding.exo.setVisibility(View.GONE);
+        webPlayer.setVisibility(View.VISIBLE);
+        webPlayer.bringToFront();
+        webPlayer.start(result);
+        // 添加显示动画
+        webPlayer.setAlpha(0f);
+        webPlayer.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start();
+       webPlayer.setWebViewClient(new WebViewClient(){
+           @Override
+           public void onPageFinished(WebView webView, String s) {
+               super.onPageFinished(webView, s);
+               try {
+                   InputStream inputStream=getAssets().open("js/webview_player_impl.js");
+                   BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                   StringBuilder sb = new StringBuilder();
+                   String line;
+                   while ((line = reader.readLine()) != null) {
+                       sb.append(line).append("\n");
+                   }
+                   reader.close();
+                   webView.evaluateJavascript(sb.toString(),value->{
+                       Logger.t("提示").d("注入完成");
+                   });
+               } catch (IOException e) {
+                   throw new RuntimeException(e);
+               }
+               hideProgress();
+           }
+       });
     }
 
     private void checkPlayImg() {
@@ -1029,6 +1085,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        webPlayer.destroy();
+        assert webPlayer.webView == null;
         mPlayers.release();
         Source.get().exit();
         PlaybackService.stop();

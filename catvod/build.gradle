@@ -37,4 +37,6 @@ dependencies {
         exclude group: 'com.google.j2objc', module: 'j2objc-annotations'
         exclude group: 'org.codehaus.mojo', module: 'animal-sniffer-annotations'
     }
+
+    api 'com.tencent.tbs:tbssdk:44286'
 }

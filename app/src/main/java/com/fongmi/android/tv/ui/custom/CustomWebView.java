@@ -123,7 +123,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     private void start(Map<String, String> headers) {
-//        OkCookieJar.setAcceptThirdPartyCookies(this);
+        OkCookieJar.setAcceptThirdPartyCookies(this);
         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true);
         checkHeader(url, headers);
         loadUrl(url, headers);

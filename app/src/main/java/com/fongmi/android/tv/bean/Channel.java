@@ -54,6 +54,8 @@ public class Channel {
     private Integer parse;
     @SerializedName("drm")
     private Drm drm;
+    @SerializedName("mode")
+    private Integer mode;
 
     private boolean selected;
     private Group group;
@@ -262,6 +264,16 @@ public class Channel {
     public void setLine(int line) {
         this.line = Math.max(line, 0);
     }
+
+
+    public Integer getMode() {
+        return mode == null ? 0 : mode;//0 普通模式 1 使用webview打开网页
+    }
+
+    public void setMode(Integer mode) {
+        this.mode = mode;
+    }
+
 
     public boolean isSelected() {
         return selected;
