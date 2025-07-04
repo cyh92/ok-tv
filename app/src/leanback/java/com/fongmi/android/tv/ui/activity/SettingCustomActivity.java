@@ -2,6 +2,7 @@ package com.fongmi.android.tv.ui.activity;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Build;
 import android.view.View;
 
 import androidx.viewbinding.ViewBinding;
@@ -47,12 +48,16 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
         mBinding.homeHistoryText.setText(Setting.isHomeHistory()? historyText[0] : historyText[1]);
     }
     private void setParseWebview(View view) {
-        int index = Setting.getParseWebView();
-        int i= index == parseWebview.length - 1 ? 0 : ++index;
-        Setting.putParseWebView(i);
-        mBinding.parseWebviewText.setText(parseWebview[i]);
-
-        if (index == 1 && QbSdk.getTbsVersion(App.get()) <= 0) X5WebViewDialog.create(this).show();
+        if (Build.VERSION.SDK_INT > 34) {
+            Notify.show("Android 版本大于 14，跳过 X5 内核初始化");
+            return;
+        }else {
+            int index = Setting.getParseWebView();
+            int i= index == parseWebview.length - 1 ? 0 : ++index;
+            Setting.putParseWebView(i);
+            mBinding.parseWebviewText.setText(parseWebview[i]);
+            if (index == 1 && QbSdk.getTbsVersion(App.get()) <= 0) X5WebViewDialog.create(this).show();
+        }
     }
 
 
