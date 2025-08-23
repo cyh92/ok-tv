@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 
@@ -33,7 +34,7 @@ public class WebViewPlayer extends FrameLayout {
     public WebView webView;
     private ProgressBar progressBar;
     private View touchInterceptor;
-    private boolean isUserInteractionEnabled;
+    private boolean isUserInteractionEnabled = false; // 默认禁用用户交互
     private VideoPlayerCallback callback;
     private boolean isVideoDetected = false;
     
@@ -59,7 +60,15 @@ public class WebViewPlayer extends FrameLayout {
     public void start(Channel result) {
         isVideoDetected = false;
         Logger.t(TAG).d("Starting WebView with URL: " + result.getUrl());
+        Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
+        Logger.t(TAG).d("触摸透明状态: " + isTouchTransparent());
+        
         webView.loadUrl(result.getUrl(), result.getHeaders());
+        
+        // 注入JavaScript禁用用户交互
+        if (!isUserInteractionEnabled) {
+            injectDisableInteractionScript();
+        }
     }
     
     public void stop(){
@@ -81,6 +90,12 @@ public class WebViewPlayer extends FrameLayout {
         initProgressBar(context);
         initTouchInterceptor(context);
         addViewsToLayout();
+        
+        // 默认禁用交互，设置视图属性
+        setClickable(false);
+        setFocusable(false);
+        setFocusableInTouchMode(false);
+        Logger.t(TAG).d("初始化WebViewPlayer，默认禁用交互");
     }
 
     private void initWebView(Context context) {
@@ -102,6 +117,11 @@ public class WebViewPlayer extends FrameLayout {
         settings.setLoadsImagesAutomatically(false); // 禁用自动加载图片
         settings.setBlockNetworkImage(true); // 禁用网络图片加载
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE); // 直播不需要缓存
+        
+        // 禁用用户交互功能
+        settings.setSupportZoom(false); // 禁用缩放
+        settings.setBuiltInZoomControls(false); // 禁用内置缩放控件
+        settings.setDisplayZoomControls(false); // 禁用显示缩放控件
         
         // Media playback settings
         settings.setMediaPlaybackRequiresUserGesture(false);
@@ -129,10 +149,19 @@ public class WebViewPlayer extends FrameLayout {
         }
         
         // TV adaptation settings
-        webView.setFocusable(true);
-        webView.setFocusableInTouchMode(true);
+        webView.setFocusable(false); // 禁用焦点，防止点击
+        webView.setFocusableInTouchMode(false); // 禁用触摸模式下的焦点
         webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
         webView.setScrollbarFadingEnabled(true);
+        
+        // 禁用WebView内部的触摸处理，但不干扰事件传递
+        webView.setOnTouchListener(new OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                // 不处理任何事件，让dispatchTouchEvent处理
+                return false;
+            }
+        });
         
         Logger.t(TAG).d("WebView settings configured for live streaming");
     }
@@ -185,26 +214,41 @@ public class WebViewPlayer extends FrameLayout {
     }
 
     private void initTouchInterceptor(Context context) {
-        touchInterceptor = new View(context) {
-            @Override
-            public boolean onTouchEvent(MotionEvent event) {
-                if (!isUserInteractionEnabled) {
-                    ViewParent parent = getParent();
-                    if (parent instanceof ViewGroup) {
-                        return ((ViewGroup) parent).onTouchEvent(event);
-                    }
-                    return false;
-                }
-                return super.onTouchEvent(event);
-            }
-        };
-        touchInterceptor.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        // 简化实现：不再需要额外的触摸拦截器
+        // 直接通过WebViewPlayer的onTouchEvent处理
+        touchInterceptor = null;
     }
 
     private void addViewsToLayout() {
         addView(webView);
         addView(progressBar);
-        addView(touchInterceptor);
+        // touchInterceptor 不再需要，直接通过onTouchEvent处理
+    }
+
+    // 简化的触摸事件处理，依赖setClickable控制
+    // 删除复杂的onInterceptTouchEvent和dispatchTouchEvent处理
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        // 如果禁用用户交互，直接让父视图处理触摸事件
+        if (!isUserInteractionEnabled) {
+            Logger.t(TAG).d("禁用交互模式，跳过WebViewPlayer，直接让父视图处理: " + event.getAction());
+            
+            // 直接返回false，不处理任何触摸事件，让父视图处理
+            return false;
+        }
+        
+        return super.dispatchTouchEvent(event);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        // 如果禁用用户交互，确保事件不被消费，让父视图处理
+        if (!isUserInteractionEnabled) {
+            Logger.t(TAG).d("禁用交互模式，不处理触摸事件: " + event.getAction());
+            return false; // 不消费事件，让LiveActivity处理手势
+        }
+        return super.onTouchEvent(event);
     }
 
     @Override
@@ -236,9 +280,96 @@ public class WebViewPlayer extends FrameLayout {
 
     public void setUserInteractionEnabled(boolean enabled) {
         isUserInteractionEnabled = enabled;
-        if (touchInterceptor != null) {
-            touchInterceptor.setVisibility(enabled ? View.GONE : View.VISIBLE);
+        // 不再需要touchInterceptor，直接通过WebView设置处理
+        if (webView != null) {
+            webView.setFocusable(enabled);
+            webView.setFocusableInTouchMode(enabled);
         }
+        
+        // 当禁用交互时，让WebViewPlayer对触摸事件透明
+        if (!enabled) {
+            setClickable(false);
+            setFocusable(false);
+            setFocusableInTouchMode(false);
+        } else {
+            setClickable(true);
+            setFocusable(true);
+            setFocusableInTouchMode(true);
+        }
+        
+        Logger.t(TAG).d("用户交互设置: " + (enabled ? "启用" : "禁用") + ", 视图可点击: " + isClickable());
+    }
+    
+    /**
+     * 禁用用户交互（点击、触摸等）
+     */
+    public void disableUserInteraction() {
+        setUserInteractionEnabled(false);
+    }
+    
+    /**
+     * 启用用户交互（点击、触摸等）
+     */
+    public void enableUserInteraction() {
+        setUserInteractionEnabled(true);
+    }
+    
+    /**
+     * 获取当前用户交互状态
+     */
+    public boolean isUserInteractionEnabled() {
+        return isUserInteractionEnabled;
+    }
+    
+    /**
+     * 检查WebViewPlayer是否对触摸事件透明
+     */
+    public boolean isTouchTransparent() {
+        return !isClickable() && !isFocusable();
+    }
+    
+    /**
+     * 测试触摸事件流程（从 LiveActivity 调用）
+     */
+    public void testTouchEventFlow() {
+        Logger.t(TAG).d("=== 测试触摸事件流程 ===");
+        Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
+        Logger.t(TAG).d("WebViewPlayer可点击: " + isClickable());
+        Logger.t(TAG).d("WebViewPlayer可聚焦: " + isFocusable());
+        Logger.t(TAG).d("WebView可点击: " + (webView != null ? webView.isClickable() : "null"));
+        Logger.t(TAG).d("父视图类型: " + (getParent() != null ? getParent().getClass().getSimpleName() : "null"));
+        Logger.t(TAG).d("视图层级: " + getClass().getSimpleName() + " -> " + 
+                      (getParent() != null ? getParent().getClass().getSimpleName() : "null"));
+        Logger.t(TAG).d("========================");
+    }
+    
+    /**
+     * 注入JavaScript禁用网页内容交互，但不影响LiveActivity手势
+     */
+    private void injectDisableInteractionScript() {
+        String script = 
+            "javascript:" +
+            "(function(){" +
+                // 只禁用网页内容的交互，不影响容器级别的手势
+                "var style = document.createElement('style');" +
+                "style.innerHTML = '* { " +
+                    "-webkit-user-select: none !important; " +
+                    "-webkit-touch-callout: none !important; " +
+                    "-webkit-tap-highlight-color: rgba(0,0,0,0) !important; " +
+                    "user-select: none !important; " +
+                "} a, button, input, textarea { pointer-events: none !important; }';" +
+                "document.head.appendChild(style);" +
+                // 禁用特定事件，但不禁用触摸滑动
+                "document.addEventListener('click', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
+                "document.addEventListener('contextmenu', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
+                "document.addEventListener('selectstart', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
+                "document.addEventListener('dragstart', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
+            "})()";
+        
+        webView.post(() -> {
+            webView.loadUrl(script);
+            Logger.t(TAG).d("已注入禁用WebView内容交互的JavaScript代码");
+        });
     }
 
     public void onResume() {

@@ -663,9 +663,13 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void start(Channel result) {
+        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
+        
         if (result.getMode() == 1) {
+            Logger.t("LiveActivity").d("切换到WebView模式");
             showWebView(result);
         } else {
+            Logger.t("LiveActivity").d("切换到标准播放器模式");
             webPlayer.stop();
             webPlayer.setVisibility(View.GONE);
             mBinding.exo.setVisibility(View.VISIBLE);
@@ -676,10 +680,15 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     // 显示WebView并加载URL
     private void showWebView(Channel result) {
         try {
+            Logger.t("LiveActivity").d("初始化WebView播放器");
             webPlayer.stop();
             mBinding.exo.setVisibility(View.GONE);
             webPlayer.setVisibility(View.VISIBLE);
             webPlayer.bringToFront();
+            
+            // 检查WebViewPlayer的触摸透明状态
+            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
+            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
             
             // 设置回调监听
             webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
@@ -793,7 +802,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         hideProgress();
         showError(errorMessage);
     }
-
+    
     private void checkPlayImg() {
         ActionEvent.update();
         mBinding.control.action.setText(mPlayers.isPlaying() ? R.string.pause : R.string.play);
