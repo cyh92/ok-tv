@@ -1,5 +1,7 @@
 package com.fongmi.android.tv.ui.custom;
 
+import static com.tencent.smtt.sdk.WebSettings.*;
+
 import android.content.Context;
 import android.os.Build;
 import android.util.AttributeSet;
@@ -23,6 +25,7 @@ import com.tencent.smtt.sdk.WebView;
 import com.tencent.smtt.sdk.WebViewClient;
 
 import com.fongmi.android.tv.bean.Channel;
+import com.orhanobut.logger.Logger;
 
 public class WebViewPlayer extends FrameLayout {
 
@@ -31,6 +34,15 @@ public class WebViewPlayer extends FrameLayout {
     private ProgressBar progressBar;
     private View touchInterceptor;
     private boolean isUserInteractionEnabled;
+    private VideoPlayerCallback callback;
+    private boolean isVideoDetected = false;
+    
+    public interface VideoPlayerCallback {
+        void onVideoFound(int videoCount);
+        void onVideoPlaying();
+        void onVideoError(String error);
+        void onPageLoadProgress(int progress);
+    }
 
     public WebViewPlayer(Context context) {
         this(context, null);
@@ -45,10 +57,24 @@ public class WebViewPlayer extends FrameLayout {
         init(context);
     }
     public void start(Channel result) {
+        isVideoDetected = false;
+        Logger.t(TAG).d("Starting WebView with URL: " + result.getUrl());
         webView.loadUrl(result.getUrl(), result.getHeaders());
     }
+    
     public void stop(){
+        isVideoDetected = false;
+        webView.stopLoading();
         webView.loadUrl("about:blank");
+        Logger.t(TAG).d("WebView stopped");
+    }
+    
+    public void setCallback(VideoPlayerCallback callback) {
+        this.callback = callback;
+    }
+    
+    public boolean isVideoDetected() {
+        return isVideoDetected;
     }
     private void init(Context context) {
         initWebView(context);
@@ -65,20 +91,27 @@ public class WebViewPlayer extends FrameLayout {
 
     private void setupWebViewSettings() {
         WebSettings settings = webView.getSettings();
-        // 基本设置
+        
+        // Core JavaScript and DOM settings
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
+        
+        // Performance optimizations for live streaming
         settings.setLoadsImagesAutomatically(false); // 禁用自动加载图片
         settings.setBlockNetworkImage(true); // 禁用网络图片加载
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE); // 直播不需要缓存
+        
+        // Media playback settings
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0");
-        // 启用缓存
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        // 启用 JavaScript 自动点击功能
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        // 安全设置
+        
+        // Enhanced User-Agent for better compatibility
+        String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0";
+        settings.setUserAgentString(userAgent);
+        
+        // Security settings
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccessFromFileURLs(false);
@@ -86,18 +119,22 @@ public class WebViewPlayer extends FrameLayout {
         settings.setDatabaseEnabled(false);
         settings.setGeolocationEnabled(false);
         
+        // Mixed content handling for secure streaming
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            settings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false);
         }
         
-        // 媒体播放设置
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            settings.setMediaPlaybackRequiresUserGesture(false);
-        }
-
-        // TV适配设置
+        // TV adaptation settings
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
+        webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
+        webView.setScrollbarFadingEnabled(true);
+        
+        Logger.t(TAG).d("WebView settings configured for live streaming");
     }
 
     private void setDefaultWebClients() {
@@ -109,6 +146,33 @@ public class WebViewPlayer extends FrameLayout {
                     progressBar.setProgress(newProgress);
                     progressBar.setVisibility(newProgress == 100 ? View.GONE : View.VISIBLE);
                 }
+                
+                if (callback != null) {
+                    callback.onPageLoadProgress(newProgress);
+                }
+                
+                Logger.t(TAG).d("Page load progress: " + newProgress + "%");
+            }
+            
+            @Override
+            public boolean onConsoleMessage(com.tencent.smtt.export.external.interfaces.ConsoleMessage consoleMessage) {
+                String message = consoleMessage.message();
+                Logger.t(TAG + "-Console").d(message);
+                
+                // 检测视频相关消息
+                if (message.contains("发现") && message.contains("视频元素")) {
+                    isVideoDetected = true;
+                    if (callback != null) {
+                        try {
+                            int videoCount = Integer.parseInt(message.replaceAll("\\D+", ""));
+                            callback.onVideoFound(videoCount);
+                        } catch (NumberFormatException e) {
+                            callback.onVideoFound(1);
+                        }
+                    }
+                }
+                
+                return super.onConsoleMessage(consoleMessage);
             }
         });
     }

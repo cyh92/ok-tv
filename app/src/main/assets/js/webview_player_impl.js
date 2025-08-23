@@ -1,4 +1,46 @@
 const ___startTime = Date.now();
+const MAX_DETECTION_TIME = 30000; // 30秒最大检测时间
+const DETECTION_INTERVAL = 200; // 200ms检测间隔
+let videoDetectionAttempts = 0;
+let maxDetectionAttempts = MAX_DETECTION_TIME / DETECTION_INTERVAL;
+
+// 增强的视频检测函数
+function findAllVideos() {
+    const videos = [];
+    
+    // 检测常规 video 元素
+    document.querySelectorAll('video').forEach(video => {
+        if (video.src || video.currentSrc) {
+            videos.push(video);
+        }
+    });
+    
+    // 检测 Shadow DOM 中的 video 元素
+    const shadowVideo = getVideoParentShadowRoots();
+    if (shadowVideo && !videos.includes(shadowVideo)) {
+        videos.push(shadowVideo);
+    }
+    
+    // 检测 iframe 中的视频（如果同源）
+    try {
+        document.querySelectorAll('iframe').forEach(iframe => {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.querySelectorAll('video').forEach(video => {
+                    if (video.src || video.currentSrc) {
+                        videos.push(video);
+                    }
+                });
+            } catch (e) {
+                // 跨域 iframe，忽略
+            }
+        });
+    } catch (e) {
+        console.warn('无法检测iframe中的视频:', e.message);
+    }
+    
+    return videos;
+}
 
 function getVideoParentShadowRoots() {
     const allElements = document.querySelectorAll('*');
@@ -7,6 +49,33 @@ function getVideoParentShadowRoots() {
         if (shadowRoot) return shadowRoot.querySelector('video');
     }
     return null;
+}
+
+// 增强的视频事件监听
+function setupVideoEventListeners(video) {
+    const events = ['loadstart', 'loadeddata', 'canplay', 'play', 'pause', 'error', 'ended'];
+    
+    events.forEach(eventType => {
+        video.addEventListener(eventType, function(e) {
+            console.log(`视频事件: ${eventType}`, {
+                src: video.src || video.currentSrc,
+                readyState: video.readyState,
+                paused: video.paused,
+                duration: video.duration
+            });
+            
+            if (eventType === 'error') {
+                console.error('视频播放错误:', video.error);
+                if (typeof Android !== 'undefined' && Android.onVideoError) {
+                    Android.onVideoError('视频加载失败: ' + (video.error ? video.error.message : '未知错误'));
+                }
+            }
+            
+            if (eventType === 'canplay' && typeof Android !== 'undefined' && Android.onVideoFound) {
+                Android.onVideoFound(1);
+            }
+        });
+    });
 }
 
 function removeVideoPlayerControl() {
@@ -76,26 +145,70 @@ function cleanAllStyle() {
 }
 
 function __initializetMain() {
-    let video = document.querySelector('video');
-    video = video ? video : getVideoParentShadowRoots();
-    if (Date.now() - ___startTime > 15000) {
+    videoDetectionAttempts++;
+    
+    if (videoDetectionAttempts > maxDetectionAttempts) {
         clearInterval(my_pollingIntervalId);
-        try {
-            video.pause();
-        } catch (error) {
-            console.error('Error pausing video:', error);
+        console.error('视频检测超时，停止检测');
+        if (typeof Android !== 'undefined' && Android.onVideoError) {
+            Android.onVideoError('视频检测超时，未找到可播放的视频');
         }
-        Android.updatePlaceholderVisible(true,'加载失败');
         return;
     }
-    if (video && video.src) {
-        console.info(video.src);
-        if (video.paused) video.play();
-        video.volume = 1;
-        video.muted = false;
-        if (video.videoWidth * video.videoHeight !== 0) addVideoPlayerMask(video);
-        setInterval(enableVideo, 100, video); //2秒后再看一下
+    
+    try {
+        const videos = findAllVideos();
+        
+        if (videos.length > 0) {
+            console.log(`发现 ${videos.length} 个视频元素`);
+            
+            for (let video of videos) {
+                if (video.src || video.currentSrc) {
+                    setupVideoEventListeners(video);
+                    
+                    console.info('视频源:', video.src || video.currentSrc);
+                    
+                    // 尝试播放视频
+                    if (video.paused) {
+                        video.play().catch(e => {
+                            console.warn('自动播放失败:', e.message);
+                        });
+                    }
+                    
+                    video.volume = 1;
+                    video.muted = false;
+                    
+                    // 检查视频是否有尺寸
+                    if (video.videoWidth > 0 && video.videoHeight > 0) {
+                        addVideoPlayerMask(video);
+                        console.log('视频初始化成功，尺寸:', video.videoWidth + 'x' + video.videoHeight);
+                        return;
+                    }
+                    
+                    // 等待视频加载完成
+                    video.addEventListener('loadedmetadata', function() {
+                        if (video.videoWidth > 0 && video.videoHeight > 0) {
+                            addVideoPlayerMask(video);
+                            console.log('视频元数据加载完成，尺寸:', video.videoWidth + 'x' + video.videoHeight);
+                        }
+                    }, { once: true });
+                    
+                    setInterval(enableVideo, 100, video);
+                    break; // 找到第一个可用视频就停止
+                }
+            }
+        } else {
+            // 每5秒报告一次检测状态
+            if (videoDetectionAttempts % (5000 / DETECTION_INTERVAL) === 0) {
+                console.log(`正在搜索视频元素... (第${videoDetectionAttempts}次尝试)`);
+            }
+        }
+    } catch (error) {
+        console.error('视频检测发生错误:', error);
+        if (typeof Android !== 'undefined' && Android.onVideoError) {
+            Android.onVideoError('视频检测发生错误: ' + error.message);
+        }
     }
- }
+}
 // cleanAllStyle();
-const my_pollingIntervalId = setInterval(__initializetMain, 100);
+const my_pollingIntervalId = setInterval(__initializetMain, DETECTION_INTERVAL);
