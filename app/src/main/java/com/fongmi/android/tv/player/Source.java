@@ -12,6 +12,7 @@ import com.fongmi.android.tv.player.extractor.Push;
 import com.fongmi.android.tv.player.extractor.TVBus;
 import com.fongmi.android.tv.player.extractor.Thunder;
 import com.fongmi.android.tv.player.extractor.Video;
+import com.fongmi.android.tv.player.extractor.WebView;
 import com.fongmi.android.tv.utils.UrlUtil;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ public class Source {
         extractors.add(new Thunder());
         extractors.add(new TVBus());
         extractors.add(new Video());
+        extractors.add(new WebView());
     }
 
     private Extractor getExtractor(String url) {

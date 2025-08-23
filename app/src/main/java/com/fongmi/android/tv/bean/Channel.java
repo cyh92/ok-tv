@@ -53,6 +53,8 @@ public class Channel {
     private Integer parse;
     @SerializedName("drm")
     private Drm drm;
+    @SerializedName("mode")
+    private Integer mode;
 
     private boolean selected;
     private Group group;
@@ -218,6 +220,14 @@ public class Channel {
         this.drm = drm;
     }
 
+    public Integer getMode() {
+        return mode == null ? 0 : mode;
+    }
+
+    public void setMode(Integer mode) {
+        this.mode = mode;
+    }
+
     public Group getGroup() {
         return group;
     }
@@ -368,6 +378,7 @@ public class Channel {
         setUrls(item.getUrls());
         setData(item.getData());
         setDrm(item.getDrm());
+        setMode(item.getMode());
         setEpg(item.getEpg());
         setUa(item.getUa());
         return this;

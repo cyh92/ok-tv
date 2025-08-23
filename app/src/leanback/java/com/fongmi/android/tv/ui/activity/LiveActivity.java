@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.view.KeyEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 
 import androidx.annotation.Dimension;
 import androidx.annotation.NonNull;
@@ -50,6 +51,7 @@ import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
 import com.fongmi.android.tv.ui.custom.CustomLiveListView;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog;
@@ -62,6 +64,14 @@ import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
+import com.orhanobut.logger.Logger;
+import com.tencent.smtt.sdk.WebView;
+import com.tencent.smtt.sdk.WebViewClient;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -83,6 +93,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
     private LiveViewModel mViewModel;
     private List<Group> mHides;
     private Players mPlayers;
+    private WebViewPlayer webPlayer;
     private Channel mChannel;
     private View mOldView;
     private Group mGroup;
@@ -143,6 +154,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         mClock = Clock.create(Arrays.asList(mBinding.widget.clock, mBinding.display.clock));
         mKeyDown = CustomKeyDownLive.create(this);
         mPlayers = Players.create(this);
+        webPlayer = new WebViewPlayer(this);
         mHides = new ArrayList<>();
         mR0 = this::setActivated;
         mR1 = this::hideControl;
@@ -154,6 +166,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         setSubtitleView();
         setVideoView();
         setDisplayView();
+        setWebViewPlayer();
         setViewModel();
         checkLive();
     }
@@ -234,6 +247,14 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         showDisplayInfo();
     }
 
+    private void setWebViewPlayer() {
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, 
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+    }
+
     private void setScale(int scale) {
         getExo().setResizeMode(scale);
         getIjk().setResizeMode(scale);
@@ -242,7 +263,14 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(LiveViewModel.class);
-        mViewModel.url.observe(this, result -> mPlayers.start(result, getTimeout()));
+        mViewModel.url.observe(this, result -> {
+            // Check if channel requires WebView mode
+            if (result.getMode() == 1 || result.getUrl().startsWith("webview://")) {
+                showWebView(result);
+            } else {
+                mPlayers.start(result, getTimeout());
+            }
+        });
         mViewModel.xml.observe(this, this::setEpg);
         mViewModel.epg.observe(this, this::setEpg);
         mViewModel.live.observe(this, live -> {
@@ -692,7 +720,119 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
         mViewModel.getUrl(mChannel);
         mPlayers.clear();
         mPlayers.stop();
+        webPlayer.stop();
         showProgress();
+    }
+
+    // 显示WebView并加载URL
+    private void showWebView(Channel result) {
+        try {
+            webPlayer.stop();
+            mBinding.exo.setVisibility(View.GONE);
+            mBinding.ijk.setVisibility(View.GONE);
+            webPlayer.setVisibility(View.VISIBLE);
+            webPlayer.bringToFront();
+            
+            // 设置回调监听
+            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
+                @Override
+                public void onVideoFound(int videoCount) {
+                    Logger.t("WebView").d("检测到 " + videoCount + " 个视频元素");
+                    hideProgress();
+                }
+                
+                @Override
+                public void onVideoPlaying() {
+                    Logger.t("WebView").d("视频开始播放");
+                    hideProgress();
+                }
+                
+                @Override
+                public void onVideoError(String error) {
+                    Logger.t("WebView").e("视频播放错误: " + error);
+                    onWebViewError(error);
+                }
+                
+                @Override
+                public void onPageLoadProgress(int progress) {
+                    if (progress < 100) {
+                        showProgress();
+                    }
+                }
+            });
+            
+            webPlayer.start(result);
+            
+            // 添加显示动画
+            webPlayer.setAlpha(0f);
+            webPlayer.animate()
+                    .alpha(1f)
+                    .setDuration(300)
+                    .start();
+            
+            webPlayer.setWebViewClient(new WebViewClient(){
+                private boolean isScriptInjected = false;
+                private final long startTime = System.currentTimeMillis();
+                private static final long TIMEOUT_MS = 30000; // 30秒超时
+
+                @Override
+                public void onPageFinished(WebView webView, String url) {
+                    super.onPageFinished(webView, url);
+                    
+                    // 检查超时
+                    if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
+                        Logger.t("WebView").e("页面加载超时");
+                        onWebViewError("页面加载超时");
+                        return;
+                    }
+                    
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
+                    
+                    Logger.t("WebView").d("页面加载完成: " + url);
+                }
+                
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    super.onReceivedError(view, errorCode, description, failingUrl);
+                    Logger.t("WebView").e("页面加载错误: " + description);
+                    onWebViewError("页面加载失败: " + description);
+                }
+
+            });
+
+        } catch (Exception e) {
+            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+            onWebViewError("播放器初始化失败");
+        }
+    }
+    
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+            
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+            
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
+        }
+    }
+    
+    private void onWebViewError(String errorMessage) {
+        hideProgress();
+        showError(errorMessage);
     }
 
     private void resetAdapter() {
