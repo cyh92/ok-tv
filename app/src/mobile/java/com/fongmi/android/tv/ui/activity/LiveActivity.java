@@ -809,7 +809,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     
     private void onWebViewError(String errorMessage) {
         hideProgress();
-        showError(errorMessage);
+//        showError(errorMessage);
     }
 
     private void checkControl() {

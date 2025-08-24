@@ -739,7 +739,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
                     // 检查超时
                     if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
                         Logger.t("WebView").e("页面加载超时");
-                        onWebViewError("页面加载超时");
+//                        onWebViewError("页面加载超时");
                         return;
                     }
                     
@@ -800,7 +800,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     
     private void onWebViewError(String errorMessage) {
         hideProgress();
-        showError(errorMessage);
+//        showError(errorMessage);
     }
     
     private void checkPlayImg() {
