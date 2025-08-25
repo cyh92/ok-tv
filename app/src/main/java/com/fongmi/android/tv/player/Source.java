@@ -87,6 +87,7 @@ public class Source {
         Extractor extractor = getExtractor(url);
         if (extractor != null) channel.setParse(0);
         if (extractor instanceof Video) channel.setParse(1);
+        if (extractor instanceof WebView) channel.setMode(1);
         return extractor == null ? url : extractor.fetch(url);
     }
 
