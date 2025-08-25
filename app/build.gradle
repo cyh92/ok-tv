@@ -8,14 +8,18 @@ android {
     compileSdk {
         version = release(36)
     }
+    compileSdk {
+        version = release(36)
+    }
 
     defaultConfig {
         applicationId "com.fongmi.android.tv"
         minSdk 24
+        minSdk 24
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 407
-        versionName "4.0.7"
+        versionCode 408
+        versionName "4.0.8"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]
@@ -31,6 +35,10 @@ android {
         }
         mobile {
             dimension "mode"
+        }
+        x86 {
+            dimension "abi"
+            ndk { abiFilters "x86" }
         }
         arm64_v8a {
             dimension "abi"
@@ -56,6 +64,9 @@ android {
     }
 
     packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+        }
         resources {
             exclude 'META-INF/beans.xml'
             exclude 'META-INF/versions/9/OSGI-INF/MANIFEST.MF'
@@ -83,6 +94,8 @@ android {
 
     compileOptions {
         coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -143,9 +156,9 @@ dependencies {
     mobileImplementation 'com.google.android.flexbox:flexbox:3.0.0'
     mobileImplementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
     annotationProcessor 'androidx.room:room-compiler:2.7.2'
+    annotationProcessor 'androidx.room:room-compiler:2.7.2'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
     annotationProcessor 'org.greenrobot:eventbus-annotation-processor:3.3.1'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
-
     implementation 'com.tencent.tbs:tbssdk:44286'
 }

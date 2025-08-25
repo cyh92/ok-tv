@@ -51,7 +51,7 @@ import com.fongmi.android.tv.ui.adapter.ChannelAdapter;
 import com.fongmi.android.tv.ui.adapter.EpgDataAdapter;
 import com.fongmi.android.tv.ui.adapter.GroupAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
-import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
+import com.fongmi.android.tv.ui.custom.CustomKeyDown;
 import com.fongmi.android.tv.ui.dialog.CastDialog;
 import com.fongmi.android.tv.ui.dialog.InfoDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
@@ -82,16 +82,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-public class LiveActivity extends BaseActivity implements CustomKeyDownLive.Listener, TrackDialog.Listener, Biometric.Callback, PassCallback, LiveCallback, GroupAdapter.OnClickListener, ChannelAdapter.OnClickListener, EpgDataAdapter.OnClickListener, CastDialog.Listener, InfoDialog.Listener {
+public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener, TrackDialog.Listener, Biometric.Callback, PassCallback, LiveCallback, GroupAdapter.OnClickListener, ChannelAdapter.OnClickListener, EpgDataAdapter.OnClickListener, CastDialog.Listener, InfoDialog.Listener {
 
     private ActivityLiveBinding mBinding;
     private ChannelAdapter mChannelAdapter;
     private EpgDataAdapter mEpgDataAdapter;
     private Observer<Channel> mObserveUrl;
-    private CustomKeyDownLive mKeyDown;
     private GroupAdapter mGroupAdapter;
     private Observer<Epg> mObserveEpg;
     private LiveViewModel mViewModel;
+    private CustomKeyDown mKeyDown;
     private List<Group> mHides;
     private Players mPlayers;
     private Channel mChannel;
@@ -147,7 +147,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     @Override
     protected void initView(Bundle savedInstanceState) {
         webPlayer = new WebViewPlayer(this);
-        mKeyDown = CustomKeyDownLive.create(this, mBinding.exo);
+        mKeyDown = CustomKeyDown.create(this, mBinding.exo);
         setPadding(mBinding.control.getRoot());
         setPadding(mBinding.recycler, true);
         mPlayers = Players.create(this);
@@ -548,15 +548,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     }
 
     private void setArtwork(String url) {
-        ImgUtil.load(url, R.drawable.radio, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+        ImgUtil.load(url, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
-            }
-
-            @Override
-            public void onLoadFailed(@Nullable Drawable error) {
-                mBinding.exo.setDefaultArtwork(error);
             }
 
             @Override
@@ -1018,13 +1013,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         else fetch();
     }
 
-    private void prevLine() {
-        if (mChannel == null || mChannel.isOnly()) return;
-        mChannel.prevLine();
-        showInfo();
-        fetch();
-    }
-
     private void nextLine(boolean show) {
         if (mChannel == null || mChannel.isOnly()) return;
         mChannel.nextLine();
@@ -1142,16 +1130,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     }
 
     @Override
-    public void onFlingLeft() {
-        if (mPlayers.isLive()) prevLine();
-    }
-
-    @Override
-    public void onFlingRight() {
-        if (mPlayers.isLive()) nextLine(true);
-    }
-
-    @Override
     public void onSeek(long time) {
         if (mPlayers.isLive()) return;
         mBinding.widget.action.setImageResource(time > 0 ? R.drawable.ic_widget_forward : R.drawable.ic_widget_rewind);
@@ -1177,7 +1155,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     @Override
     public void onDoubleTap() {
         if (isVisible(mBinding.recycler)) hideUI();
-        else if (isVisible(mBinding.control.getRoot())) hideControl();
+        if (isVisible(mBinding.control.getRoot())) hideControl();
         else showControl();
     }
 

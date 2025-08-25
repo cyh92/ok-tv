@@ -36,7 +36,11 @@ public class KeyUtil {
         return event.getAction() == KeyEvent.ACTION_UP && event.getKeyCode() == KeyEvent.KEYCODE_MENU;
     }
 
-     public static boolean isLiveKey(KeyEvent event) {
-        return event.getKeyCode() == KeyEvent.KEYCODE_UNKNOWN || isDigitKey(event);
+    public static boolean isActionDown(KeyEvent event) {
+        return event.getAction() == KeyEvent.ACTION_DOWN;
+    }
+
+    public static boolean isActionUp(KeyEvent event) {
+        return event.getAction() == KeyEvent.ACTION_UP;
     }
 }

@@ -11,7 +11,7 @@ import android.view.ViewGroup;
 //import android.webkit.SslErrorHandler;
 //import android.webkit.WebResourceRequest;
 //import android.webkit.WebResourceResponse;
-import android.webkit.WebSettings;
+//import android.webkit.WebSettings;
 //import android.webkit.WebView;
 //import android.webkit.WebViewClient;
 
@@ -23,6 +23,7 @@ import com.tencent.smtt.export.external.interfaces.WebResourceResponse;
 import com.tencent.smtt.sdk.CookieManager;
 import com.tencent.smtt.sdk.QbSdk;
 import com.tencent.smtt.sdk.WebChromeClient;
+import com.tencent.smtt.sdk.WebSettings;
 import com.tencent.smtt.sdk.WebView;
 import com.tencent.smtt.sdk.WebViewClient;
 
@@ -48,7 +49,7 @@ import com.orhanobut.logger.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -59,13 +60,15 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
 
     private static final Pattern PLAYER = Pattern.compile("player/.*[?&][^=&]+=https?://");
     private static final String BLANK = "about:blank";
+    private static final int MAX_URLS = 5;
 
+    private LinkedHashSet<String> urls;
     private WebResourceResponse empty;
     private ParseCallback callback;
-    private HashSet<String> urls;
     private WebDialog dialog;
     private Runnable timer;
     private boolean detect;
+    private boolean stop;
     private String click;
     private String from;
     private String key;
@@ -91,21 +94,22 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
     @SuppressLint("SetJavaScriptEnabled")
     public void initSettings() {
-        this.urls = new HashSet<>();
-        this.timer = () -> stop(true);
-        this.empty = new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream("".getBytes()));
-        getSettings().setSupportZoom(true);
-        getSettings().setUseWideViewPort(true);
-        getSettings().setDatabaseEnabled(true);
-        getSettings().setDomStorageEnabled(true);
-        getSettings().setJavaScriptEnabled(true);
-        getSettings().setBuiltInZoomControls(true);
-        getSettings().setDisplayZoomControls(false);
-        getSettings().setLoadWithOverviewMode(true);
-        getSettings().setUserAgentString(Setting.getUa());
-        getSettings().setMediaPlaybackRequiresUserGesture(false);
-        getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
-        getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        timer = () -> stop(true);
+        urls = new LinkedHashSet<>();
+        empty = new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream("".getBytes()));
+        WebSettings setting = getSettings();
+        setting.setSupportZoom(true);
+        setting.setUseWideViewPort(true);
+        setting.setDatabaseEnabled(true);
+        setting.setDomStorageEnabled(true);
+        setting.setJavaScriptEnabled(true);
+        setting.setBuiltInZoomControls(true);
+        setting.setDisplayZoomControls(false);
+        setting.setLoadWithOverviewMode(true);
+        setting.setUserAgentString(Setting.getUa());
+        setting.setMediaPlaybackRequiresUserGesture(false);
+        setting.setJavaScriptCanOpenWindowsAutomatically(false);
+        setting.setMixedContentMode(2);
         setWebViewClient(webViewClient());
         setWebChromeClient(webChromeClient());
     }
@@ -144,8 +148,8 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
                 String host = request.getUrl().getHost();
                 if (TextUtils.isEmpty(host) || isAd(host)) return empty;
                 Map<String, String> headers = request.getRequestHeaders();
-                if (url.contains("challenges.cloudflare.com/turnstile")) App.post(() -> showDialog());
-                if (detect && PLAYER.matcher(url).find() && urls.add(url)) onParseAdd(headers, url);
+                if (url.contains("/cdn-cgi/challenge-platform/")) App.post(() -> showDialog());
+                if (detect && PLAYER.matcher(url).find() && addUrl(url)) onParseAdd(headers, url);
                 else if (isVideoFormat(url)) onParseSuccess(headers, url);
                 return super.shouldInterceptRequest(view, request);
             }
@@ -154,7 +158,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 if (url.equals(BLANK)) return;
-                evaluate(getScript(url));
+                evaluate(getScript(url), 0);
             }
 
             @Override
@@ -164,7 +168,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
             }
 
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return false;
             }
         };
@@ -181,6 +185,11 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
             }
         };
     }
+    private boolean addUrl(String url) {
+        if (urls.size() > MAX_URLS) urls.clear();
+        return urls.add(url);
+    }
+
     private void showDialog() {
         if (dialog != null || App.activity() == null) return;
         if (getParent() != null) ((ViewGroup) getParent()).removeView(this);
@@ -205,12 +214,13 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
         return script;
     }
 
-    private void evaluate(List<String> script) {
-        if (script.isEmpty()) return;
-        if (TextUtils.isEmpty(script.get(0))) {
-            evaluate(script.subList(1, script.size()));
+    private void evaluate(List<String> script, int index) {
+        if (index >= script.size()) return;
+        String js = script.get(index);
+        if (TextUtils.isEmpty(js)) {
+            evaluate(script, index + 1);
         } else {
-            evaluateJavascript(script.get(0), value -> evaluate(script.subList(1, script.size())));
+            evaluateJavascript(js, value -> evaluate(script, index + 1));
         }
     }
 
@@ -248,6 +258,8 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     public void stop(boolean error) {
+        if (stop) return;
+        stop = true;
         hideDialog();
         stopLoading();
         loadUrl(BLANK);
