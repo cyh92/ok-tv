@@ -2,7 +2,7 @@ package com.github.catvod.utils;
 
 public class Github {
 
-    public static final String URL = "https://gitee.com/cyh92/ok-tv/releases/download";
+    public static final String URL = "https://gitee.com/cyh92/live/releases/download";
 
     private static String getUrl(String path, String name) {
         return URL + "/" + path + "/" + name;

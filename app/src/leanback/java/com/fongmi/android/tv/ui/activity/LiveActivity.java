@@ -140,7 +140,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Override
     protected void initView() {
-        webPlayer = findViewById(R.id.webview);
+        webPlayer =  new WebViewPlayer(this);
         mClock = Clock.create(mBinding.widget.clock);
         mKeyDown = CustomKeyDownLive.create(this);
         mPlayers = Players.create(this);
@@ -204,6 +204,10 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setVideoView() {
+             // Add WebViewPlayer to the video container
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer);
+        
         mPlayers.init(mBinding.exo);
         PlaybackService.start(mPlayers);
         setScale(Setting.getLiveScale());

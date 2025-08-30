@@ -14,13 +14,6 @@
         android:clickable="true"
         android:focusable="true">
 
-        <com.fongmi.android.tv.ui.custom.WebViewPlayer
-            android:id="@+id/webview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/black"
-            android:visibility="gone" />
-
         <androidx.media3.ui.PlayerView
             android:id="@+id/exo"
             style="@style/Player.Live"
@@ -48,7 +41,6 @@
         android:id="@+id/recycler"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_margin="5dp"
         android:background="@drawable/shape_live_list"
         android:orientation="horizontal"
         android:visibility="gone"
