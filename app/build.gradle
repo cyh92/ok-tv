@@ -8,13 +8,9 @@ android {
     compileSdk {
         version = release(36)
     }
-    compileSdk {
-        version = release(36)
-    }
 
     defaultConfig {
         applicationId "com.fongmi.android.tv"
-        minSdk 24
         minSdk 24
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
@@ -71,9 +67,6 @@ android {
             exclude 'META-INF/beans.xml'
             exclude 'META-INF/versions/9/OSGI-INF/MANIFEST.MF'
         }
-          jniLibs {
-            useLegacyPackaging true
-        }
     }
 
     android.applicationVariants.configureEach { variant ->
@@ -94,8 +87,6 @@ android {
 
     compileOptions {
         coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -155,7 +146,6 @@ dependencies {
     mobileImplementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     mobileImplementation 'com.google.android.flexbox:flexbox:3.0.0'
     mobileImplementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
-    annotationProcessor 'androidx.room:room-compiler:2.7.2'
     annotationProcessor 'androidx.room:room-compiler:2.7.2'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
     annotationProcessor 'org.greenrobot:eventbus-annotation-processor:3.3.1'
