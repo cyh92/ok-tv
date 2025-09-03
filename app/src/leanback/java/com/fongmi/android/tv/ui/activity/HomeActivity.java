@@ -331,10 +331,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             case VIDEO:
                 getVideo();
                 break;
-            case IMAGE:
-                int index = getRecommendIndex();
-                mAdapter.notifyArrayItemRangeChanged(index, mAdapter.size() - index);
-                break;
             case HISTORY:
                 getHistory();
                 break;
