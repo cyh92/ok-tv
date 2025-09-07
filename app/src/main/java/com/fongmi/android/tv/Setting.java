@@ -122,7 +122,7 @@ public class Setting {
     }
 
     public static int getSiteMode() {
-        return Prefers.getInt("site_mode");
+        return Prefers.getInt("site_mode",1);
     }
 
     public static void putSiteMode(int mode) {
