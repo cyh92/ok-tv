@@ -1,9 +1,12 @@
 package com.fongmi.android.tv.ui.activity;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.view.View;
 
+import androidx.core.content.ContextCompat;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.ItemBridgeAdapter;
 import androidx.leanback.widget.ListRow;
@@ -75,12 +78,13 @@ public class HistoryActivity extends BaseActivity implements HistoryPresenter.On
 
     private void onDelete(View view) {
         if (mPresenter.isDelete()) {
-            new MaterialAlertDialogBuilder(this).setTitle(R.string.dialog_delete_record).setMessage(R.string.dialog_delete_history).setNegativeButton(R.string.dialog_negative, null).setPositiveButton(R.string.dialog_positive, (dialog, which) -> {
+         new MaterialAlertDialogBuilder(this).setTitle(R.string.dialog_delete_record).setMessage(R.string.dialog_delete_history).setNegativeButton(R.string.dialog_negative, null).setBackground(ContextCompat.getDrawable(this,R.drawable.selector_text)).setPositiveButton(R.string.dialog_positive, (dialog, which) -> {
                 History.delete(VodConfig.getCid());
                 mHistoryAdapter.clear();
                 mPresenter.setDelete(false);
                 mBinding.delete.setVisibility(View.GONE);
-            }).show();
+            }).setBackground(ContextCompat.getDrawable(this,R.drawable.selector_text)).show();
+
         } else if (mHistoryAdapter.size() > 0) {
             mPresenter.setDelete(true);
             mHistoryAdapter.notifyArrayItemRangeChanged(0, mHistoryAdapter.size());
