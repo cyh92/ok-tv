@@ -27,9 +27,11 @@ public class Path {
     public static boolean exists(String path) {
         return new File(path.replace("file://", "")).exists();
     }
-    public static File download() {
-        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+
+    public static boolean exists(File file) {
+        return file != null && file.exists() && file.length() > 0;
     }
+   
     public static File root() {
         return Environment.getExternalStorageDirectory();
     }
@@ -225,5 +227,9 @@ public class Path {
             e.printStackTrace();
             return file;
         }
+    }
+    //x5内核
+    public static File download() {
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     }
 }

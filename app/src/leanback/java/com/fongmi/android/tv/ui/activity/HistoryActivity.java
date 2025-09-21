@@ -122,7 +122,7 @@ public class HistoryActivity extends BaseActivity implements HistoryPresenter.On
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onRefreshEvent(RefreshEvent event) {
-        super.onRefreshEvent(event);
+//        super.onRefreshEvent(event);
         switch (event.getType()) {
             case HISTORY:
             case SIZE:

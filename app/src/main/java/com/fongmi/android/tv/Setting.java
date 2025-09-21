@@ -2,6 +2,8 @@ package com.fongmi.android.tv;
 
 
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.provider.Settings;
 
 import com.fongmi.android.tv.player.Players;
@@ -289,6 +291,11 @@ public class Setting {
         return new Intent(Settings.ACTION_CAPTIONING_SETTINGS).resolveActivity(App.get().getPackageManager()) != null;
     }
 
+    public static boolean hasFileManager() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && (new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + App.get().getPackageName())).resolveActivity(App.get().getPackageManager()) != null || new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).resolveActivity(App.get().getPackageManager()) != null);
+    }
+
+    //嗅探内核设置
     public static void putParseWebView(int key) {
         Prefers.put("parse_webview", key);
     }
@@ -296,6 +303,7 @@ public class Setting {
     public static int getParseWebView() {
         return Prefers.getInt("parse_webview", 0);
     }
+    //首页最近观看显示/隐藏
     public static boolean isHomeHistory() {
         return Prefers.getBoolean("home_history", false);
     }
