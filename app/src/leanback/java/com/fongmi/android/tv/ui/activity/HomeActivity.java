@@ -80,7 +80,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private boolean loading;
     private Result mResult;
     private Clock mClock;
-
+    private long mExitTime = 0;//退出响应时间
     private Site getHome() {
         return VodConfig.get().getHome();
     }
@@ -476,8 +476,13 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             setHistoryDelete(false);
         } else if (mBinding.recycler.getSelectedPosition() != 0) {
             mBinding.recycler.scrollToPosition(0);
-        } else {
-            super.onBackInvoked();
+        } else {//新增
+            if (System.currentTimeMillis() - mExitTime < 2000) {
+                super.onBackInvoked();
+            } else {
+                mExitTime = System.currentTimeMillis();
+                Notify.show("再按一次返回键退出应用");
+            }
         }
     }
 

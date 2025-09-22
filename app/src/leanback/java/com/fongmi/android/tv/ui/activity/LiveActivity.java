@@ -104,8 +104,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private boolean redirect;
     private String tag;
     private int count;
-
     private WebViewPlayer webPlayer;
+    private long mExitTime = 0;//退出响应时间
 
     public static void start(Context context) {
         if (!LiveConfig.isEmpty())
@@ -1174,8 +1174,13 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
             hideInfo();
         } else if (isVisible(mBinding.recycler)) {
             hideUI();
-        } else {
-            super.onBackInvoked();
+        } else {//新增
+            if (System.currentTimeMillis() - mExitTime < 2000) {
+                super.onBackInvoked();
+            } else {
+                mExitTime = System.currentTimeMillis();
+                Notify.show("再按一次返回键退出直播");
+            }
         }
     }
 

@@ -1,17 +1,13 @@
 package com.fongmi.android.tv.ui.activity;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.view.View;
 
 import androidx.core.content.ContextCompat;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.ItemBridgeAdapter;
-import androidx.leanback.widget.ListRow;
 import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
@@ -24,6 +20,7 @@ import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
 import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
+import com.fongmi.android.tv.utils.Notify;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.greenrobot.eventbus.Subscribe;
@@ -130,14 +127,13 @@ public class HistoryActivity extends BaseActivity implements HistoryPresenter.On
                 break;
         }
     }
-
     @Override
-    public void onBackPressed() {
+    protected void onBackInvoked() {
         if (mPresenter.isDelete()) {
             mPresenter.setDelete(false);
             mHistoryAdapter.notifyArrayItemRangeChanged(0, mHistoryAdapter.size());
         } else {
-            super.onBackPressed();
+            super.onBackInvoked();
         }
     }
 
