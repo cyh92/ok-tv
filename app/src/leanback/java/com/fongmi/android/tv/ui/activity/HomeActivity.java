@@ -453,6 +453,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (KeyUtil.isMenuKey(event)) showDialog();
         if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && getCurrentFocus() == mBinding.title) return mBinding.recycler.getChildAt(0).requestFocus();
+        if(KeyUtil.isActionDown(event)&&KeyUtil.isDigitKey(event))LiveActivity.start(this);//主页面按任意数字键进入直播
         return super.dispatchKeyEvent(event);
     }
 
