@@ -31,7 +31,7 @@ public class Path {
     public static boolean exists(File file) {
         return file != null && file.exists() && file.length() > 0;
     }
-   
+
     public static File root() {
         return Environment.getExternalStorageDirectory();
     }
