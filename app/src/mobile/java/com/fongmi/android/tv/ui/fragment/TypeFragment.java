@@ -72,10 +72,6 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         return getArguments().getInt("y");
     }
 
-    private int getY() {
-        return getArguments().getInt("y");
-    }
-
     private boolean isFolder() {
         return getArguments().getBoolean("folder");
     }
