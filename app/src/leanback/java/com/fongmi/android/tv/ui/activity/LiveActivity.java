@@ -268,6 +268,11 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
             if (result.getMode() == 1 || result.getUrl().startsWith("webview://")) {
                 showWebView(result);
             } else {
+                Logger.t("LiveActivity").d("切换到标准播放器模式");
+                webPlayer.stop();
+                webPlayer.setVisibility(View.GONE);
+                getExo().setVisibility(mPlayers.isExo() ? View.VISIBLE : View.GONE);
+                getIjk().setVisibility(mPlayers.isIjk() ? View.VISIBLE : View.GONE);
                 mPlayers.start(result, getTimeout());
             }
         });
@@ -782,7 +787,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
                     // 检查超时
                     if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
                         Logger.t("WebView").e("页面加载超时");
-                        onWebViewError("页面加载超时");
+//                        onWebViewError("页面加载超时");
                         return;
                     }
                     

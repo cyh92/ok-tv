@@ -1,5 +1,7 @@
 package com.fongmi.android.tv.utils;
 
+import android.os.Environment;
+
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Setting;
@@ -20,7 +22,13 @@ public class Tbs {
     private static final String TAG = Tbs.class.getSimpleName();
 
     public static String getUrl() {
-        return Server.get().getAddress("/x5.tbs.apk");
+        String url = "https://gitee.com/cyh92/live/releases/download/kitkat/x5.tbs-kiakat.apk";
+        File file = new File(Path.tv(), "x5.tbs-kiakat.apk");
+        if (file.exists()) return Server.get().getAddress("/file/TV/x5.tbs-kiakat.apk");
+        File x5 = new File(Path.download(), "x5.tbs.apk");
+        if (x5.exists())
+            return Server.get().getAddress("/file/" + Environment.DIRECTORY_DOWNLOADS + "/x5.tbs-kiakat.apk");
+        return url;//Server.get().getAddress("/x5.tbs.apk");
     }
 
     private static void tbsInit() {
