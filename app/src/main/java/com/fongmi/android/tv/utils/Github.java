@@ -2,17 +2,18 @@ package com.fongmi.android.tv.utils;
 
 public class Github {
 
-    public static final String URL = "https://gitee.com/cyh92/live/releases/download";
+    public static final String downloadURL = "https://gitee.com/cyh92/live/releases/download";
+    public static final String releaseURL = "https://gitee.com/cyh92/live/raw/main";
 
-    private static String getUrl(String path, String name) {
+    private static String getUrl(String URL,String path, String name) {
         return URL + "/" + path + "/" + name;
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl((dev ? "dev" : "release"), name + ".json");
+        return getUrl(releaseURL,(dev ? "dev" : "release"), name + ".json");
     }
 
     public static String getApk(boolean dev, String name) {
-        return getUrl((dev ? "dev" : "release"), name + ".apk");
+        return getUrl(downloadURL,(dev ? "dev" : "release"), name + ".apk");
     }
 }
