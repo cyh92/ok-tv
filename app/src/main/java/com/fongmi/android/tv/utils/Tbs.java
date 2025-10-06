@@ -33,7 +33,7 @@ public class Tbs {
     }
 
     public static String getUrl() {
-        String url = "https://raw.gitcode.com/cyh92/Release/raw/fongmi/x5/x5.tbs.apk";
+        String url = "https://gitee.com/cyh92/live/releases/download/release/x5.tbs.apk";
         File file = new File(Path.tv(), "x5.tbs.apk");
         if (file.exists()) return Server.get().getAddress("/file/TV/x5.tbs.apk");
         File x5 = new File(Path.download(), "x5.tbs.apk");
