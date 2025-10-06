@@ -9,6 +9,7 @@
         android:id="@+id/top"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:padding="16dp"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -16,14 +17,12 @@
             android:id="@+id/title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="16dp"
             android:layout_marginEnd="16dp"
             android:ellipsize="marquee"
             android:shadowColor="@color/grey_900"
-            android:shadowDx="2"
-            android:shadowDy="2"
-            android:shadowRadius="1"
+            android:shadowDx="4"
+            android:shadowDy="4"
+            android:shadowRadius="2"
             android:singleLine="true"
             android:textColor="@color/white"
             android:textSize="20sp"
@@ -91,10 +90,6 @@
         android:includeFontPadding="false"
         android:letterSpacing="0.05"
         android:padding="16dp"
-        android:shadowColor="@color/grey_900"
-        android:shadowDx="2"
-        android:shadowDy="2"
-        android:shadowRadius="1"
         android:textColor="@color/white"
         android:textSize="64sp"
         android:textStyle="bold"
@@ -127,9 +122,10 @@
             android:orientation="horizontal">
 
             <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/exo_position"
+                android:id="@+id/position"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:includeFontPadding="false"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 tools:text="00:00:00" />
@@ -144,9 +140,10 @@
                 android:textSize="16sp" />
 
             <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/exo_duration"
+                android:id="@+id/duration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:includeFontPadding="false"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 tools:text="00:00:00" />

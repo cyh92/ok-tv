@@ -556,7 +556,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     public void onItemClick(Flag item) {
         if (item.isActivated()) return;
         mFlagAdapter.setActivated(item);
-        mBinding.flag.scrollToPosition(mFlagAdapter.getPosition());
+        scrollToPosition(mBinding.flag, mFlagAdapter.getPosition());
         setEpisodeAdapter(item.getEpisodes());
         setQualityVisible(false);
         seamless(item);
@@ -566,8 +566,8 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     public void onItemClick(Episode item) {
         if (shouldEnterFullscreen(item)) return;
         mFlagAdapter.toggle(item);
-        notifyItemChanged(mEpisodeAdapter);
-        mBinding.episode.scrollToPosition(mEpisodeAdapter.getPosition());
+        notifyItemChanged(mBinding.episode, mEpisodeAdapter);
+        scrollToPosition(mBinding.episode, mEpisodeAdapter.getPosition());
         if (isFullscreen()) Notify.show(getString(R.string.play_ready, item.getName()));
         onRefresh();
     }
@@ -596,16 +596,16 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     private void setParse(Parse item) {
         VodConfig.get().setParse(item);
-        notifyItemChanged(mParseAdapter);
+        notifyItemChanged(mBinding.control.parse, mParseAdapter);
         if (mControlDialog != null && mControlDialog.isVisible()) mControlDialog.updateParse();
     }
 
     private void setEpisodeAdapter(List<Episode> items) {
         mBinding.control.action.episodes.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
-        mBinding.control.nextRoot.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
-        mBinding.control.prevRoot.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
-        mBinding.episode.setVisibility(items.size() == 0 ? View.GONE : View.VISIBLE);
+        mBinding.control.next.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
+        mBinding.control.prev.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
         mBinding.reverse.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
+        mBinding.episode.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         mBinding.more.setVisibility(items.size() < 10 ? View.GONE : View.VISIBLE);
         mEpisodeAdapter.addAll(items);
     }
@@ -626,7 +626,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private void reverseEpisode(boolean scroll) {
         mFlagAdapter.reverse();
         setEpisodeAdapter(getFlag().getEpisodes());
-        if (scroll) mBinding.episode.scrollToPosition(mEpisodeAdapter.getPosition());
+        if (scroll) scrollToPosition(mBinding.episode, mEpisodeAdapter.getPosition());
     }
 
     private void onName() {
@@ -874,7 +874,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private void enterFullscreen() {
         if (isFullscreen()) return;
         if (isLand()) setTransition();
-        mBinding.video.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
+        mBinding.video.postDelayed(() -> mBinding.video.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)), 100);
         setRequestedOrientation(mPlayers.isPortrait() ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         mBinding.control.title.setVisibility(View.VISIBLE);
         setRotate(mPlayers.isPortrait(), true);
@@ -888,7 +888,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         if (!isFullscreen()) return;
         if (isLand()) setTransition();
         setRequestedOrientation(isPort() ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
-        mBinding.episode.postDelayed(() -> mBinding.episode.scrollToPosition(mEpisodeAdapter.getPosition()), 50);
+        mBinding.episode.postDelayed(() -> mBinding.episode.scrollToPosition(mEpisodeAdapter.getPosition()), 100);
         mBinding.control.title.setVisibility(View.INVISIBLE);
         mBinding.video.setLayoutParams(mFrameParams);
         mPlayers.setDanmakuSize(0.8f);
@@ -991,7 +991,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     }
 
     private void setArtwork() {
-        ImgUtil.load(mHistory.getVodPic(), new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+        ImgUtil.load(this, mHistory.getVodPic(), new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
@@ -1460,8 +1460,12 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         this.lock = lock;
     }
 
-    private void notifyItemChanged(RecyclerView.Adapter<?> adapter) {
-        adapter.notifyItemRangeChanged(0, adapter.getItemCount());
+    private void notifyItemChanged(RecyclerView view, RecyclerView.Adapter<?> adapter) {
+        view.post(() -> adapter.notifyItemRangeChanged(0, adapter.getItemCount()));
+    }
+
+    private void scrollToPosition(RecyclerView view, int position) {
+        view.post(() -> view.scrollToPosition(position));
     }
 
     @Override

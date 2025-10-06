@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -280,18 +281,18 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void setWidth(Live live) {
         int padding = ResUtil.dp2px(48);
-        if (live.getWidth() == 0) for (Group item : live.getGroups())
-            live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
-        mBinding.group.getLayoutParams().width = live.getWidth() == 0 ? 0 : Math.min(live.getWidth() + padding, ResUtil.getScreenWidth() / 4);
+        if (live.getWidth() == 0) for (Group item : live.getGroups()) live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
+        int width = live.getWidth() == 0 ? 0 : Math.min(live.getWidth() + padding, ResUtil.getScreenWidth() / 4);
+        setWidth(mBinding.group, width);
     }
 
     private Group setWidth(Group group) {
         int logo = ResUtil.dp2px(60);
         int padding = ResUtil.dp2px(60);
         if (group.isKeep()) group.setWidth(0);
-        if (group.getWidth() == 0) for (Channel item : group.getChannel())
-            group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
-        mBinding.channel.getLayoutParams().width = group.getWidth() == 0 ? 0 : Math.min(group.getWidth() + padding, ResUtil.getScreenWidth() / 2);
+        if (group.getWidth() == 0) for (Channel item : group.getChannel()) group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
+        int width = group.getWidth() == 0 ? 0 : Math.min(group.getWidth() + padding, ResUtil.getScreenWidth() / 2);
+        setWidth(mBinding.channel, width);
         return group;
     }
 
@@ -299,9 +300,18 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         int padding = ResUtil.dp2px(48);
         if (epg.getList().isEmpty()) return;
         int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 16);
-        if (epg.getWidth() == 0) for (EpgData item : epg.getList())
-            epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
-        mBinding.epgData.getLayoutParams().width = epg.getWidth() == 0 ? 0 : Math.min(Math.max(epg.getWidth(), minWidth) + padding, ResUtil.getScreenWidth() / 2);
+        if (epg.getWidth() == 0) for (EpgData item : epg.getList()) epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
+        int width = epg.getWidth() == 0 ? 0 : Math.min(Math.max(epg.getWidth(), minWidth) + padding, ResUtil.getScreenWidth() / 2);
+        setWidth(mBinding.epgData, width);
+    }
+
+    private void setWidth(View view, int width) {
+        view.post(() -> {
+            ViewGroup.LayoutParams params = view.getLayoutParams();
+            if (params.width == width) return;
+            params.width = width;
+            view.setLayoutParams(params);
+        });
     }
 
     private void setPosition(int[] position) {
@@ -532,7 +542,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setArtwork() {
-        ImgUtil.load(mChannel.getLogo(),R.drawable.radio, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+        ImgUtil.load(this, mChannel.getLogo(), new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
@@ -954,7 +964,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         if (mGroup == null) return;
         int position = mGroup.getPosition() - 1;
         boolean limit = position < 0;
-        if (Setting.isAcross() & limit) prevGroup(true);
+        if (Setting.isAcross() & limit) prevGroup();
         else mGroup.setPosition(limit ? mChannelAdapter.size() - 1 : position);
         if (!mGroup.isEmpty()) setChannel(mGroup.current());
     }
@@ -963,9 +973,33 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         if (mGroup == null) return;
         int position = mGroup.getPosition() + 1;
         boolean limit = position > mChannelAdapter.size() - 1;
-        if (Setting.isAcross() && limit) nextGroup(true);
+        if (Setting.isAcross() && limit) nextGroup();
         else mGroup.setPosition(limit ? 0 : position);
         if (!mGroup.isEmpty()) setChannel(mGroup.current());
+    }
+
+    private boolean nextGroup() {
+        int position = mBinding.group.getSelectedPosition() + 1;
+        if (position > mGroupAdapter.size() - 1) position = 0;
+        if (mGroup.equals(mGroupAdapter.get(position))) return false;
+        mGroup = (Group) mGroupAdapter.get(position);
+        mBinding.group.setSelectedPosition(position);
+        if (mGroup.skip()) return nextGroup();
+        mChannelAdapter.setItems(mGroup.getChannel(), null);
+        mGroup.setPosition(0);
+        return true;
+    }
+
+    private boolean prevGroup() {
+        int position = mBinding.group.getSelectedPosition() - 1;
+        if (position < 0) position = mGroupAdapter.size() - 1;
+        if (mGroup.equals(mGroupAdapter.get(position))) return false;
+        mGroup = (Group) mGroupAdapter.get(position);
+        mBinding.group.setSelectedPosition(position);
+        if (mGroup.skip()) return prevGroup();
+        mChannelAdapter.setItems(mGroup.getChannel(), null);
+        mGroup.setPosition(mGroup.getChannel().size() - 1);
+        return true;
     }
 
     private void checkNext() {
@@ -1037,32 +1071,6 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     @Override
-    public boolean nextGroup(boolean skip) {
-        int position = mBinding.group.getSelectedPosition() + 1;
-        if (position > mGroupAdapter.size() - 1) position = 0;
-        if (mGroup.equals(mGroupAdapter.get(position))) return false;
-        mGroup = (Group) mGroupAdapter.get(position);
-        mBinding.group.setSelectedPosition(position);
-        if (skip && mGroup.skip()) return nextGroup(true);
-        mChannelAdapter.setItems(mGroup.getChannel(), null);
-        mGroup.setPosition(0);
-        return true;
-    }
-
-    @Override
-    public boolean prevGroup(boolean skip) {
-        int position = mBinding.group.getSelectedPosition() - 1;
-        if (position < 0) position = mGroupAdapter.size() - 1;
-        if (mGroup.equals(mGroupAdapter.get(position))) return false;
-        mGroup = (Group) mGroupAdapter.get(position);
-        mBinding.group.setSelectedPosition(position);
-        if (skip && mGroup.skip()) return prevGroup(true);
-        mChannelAdapter.setItems(mGroup.getChannel(), null);
-        mGroup.setPosition(mGroup.getChannel().size() - 1);
-        return true;
-    }
-
-    @Override
     public boolean dispatch(boolean check) {
         return !check || isGone(mBinding.recycler) && isGone(mBinding.control.getRoot());
     }
@@ -1083,8 +1091,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     public void onSeeking(long time) {
         if (mPlayers.isLive()) return;
         mBinding.widget.center.setVisibility(View.VISIBLE);
-        mBinding.widget.exoDuration.setText(mPlayers.getDurationTime());
-        mBinding.widget.exoPosition.setText(mPlayers.getPositionTime(time));
+        mBinding.widget.duration.setText(mPlayers.getDurationTime());
+        mBinding.widget.position.setText(mPlayers.getPositionTime(time));
         mBinding.widget.action.setImageResource(time > 0 ? R.drawable.ic_widget_forward : R.drawable.ic_widget_rewind);
         hideProgress();
     }
