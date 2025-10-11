@@ -311,4 +311,13 @@ public class Setting {
     public static void putHomeHistory(boolean show) {
         Prefers.put("home_history", show);
     }
+
+    //开机自启动
+    public static boolean isAutoStart() {
+        return Prefers.getBoolean("auto_start", false);
+    }
+
+    public static void putAutoStart(boolean start) {
+        Prefers.put("auto_start", start);
+    }
 }

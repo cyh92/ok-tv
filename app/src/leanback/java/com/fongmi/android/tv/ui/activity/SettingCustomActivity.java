@@ -36,17 +36,26 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
     protected void initView() {
         mBinding.parseWebviewText.setText(parseWebview[Setting.getParseWebView()]);
         mBinding.homeHistoryText.setText(Setting.isHomeHistory()? historyText[0] : historyText[1]);
+        mBinding.autoStartText.setText(Setting.isAutoStart()? "开启" : "关闭");
     }
 
     @Override
     protected void initEvent() {
         mBinding.parseWebview.setOnClickListener(this::setParseWebview);
         mBinding.homeHistory.setOnClickListener(this::setHomeHistory);
+        mBinding.autoStart.setOnClickListener(this::setAutoStart);
     }
+    //设置开机自启动
+    private void setAutoStart(View view) {
+        Setting.putAutoStart(!Setting.isAutoStart());
+        mBinding.autoStartText.setText(Setting.isAutoStart()? "开启" : "关闭");
+    }
+    //设置首页“最近观看”显示/隐藏
     private void setHomeHistory(View view) {
         Setting.putHomeHistory(!Setting.isHomeHistory());
         mBinding.homeHistoryText.setText(Setting.isHomeHistory()? historyText[0] : historyText[1]);
     }
+    //设置嗅探浏览器内核
     private void setParseWebview(View view) {
         if (Build.VERSION.SDK_INT > 34) {
             Notify.show("Android 版本大于 14，跳过 X5 内核初始化");
