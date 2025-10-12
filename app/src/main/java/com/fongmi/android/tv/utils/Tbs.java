@@ -71,7 +71,9 @@ public class Tbs {
     public static String url() {
         String downloadUrl = "";
         if (isCpu64Bit()) {
-            downloadUrl = "https://gitcode.com/cyh92/live/releases/download/v1.0/046295.tbs.apk";
+            downloadUrl = "https://gitee.com/cyh92/live/releases/download/release/046279_arm64v8a_x5.tbs.apk";
+        }else{
+            downloadUrl = "https://gitee.com/cyh92/live/releases/download/release/046914_armeabi_x5.tbs.apk";
         }
         return downloadUrl;
     }
