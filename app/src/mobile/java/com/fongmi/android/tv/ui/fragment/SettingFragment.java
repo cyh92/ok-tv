@@ -111,8 +111,10 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     @Override
     protected void initEvent() {
         mBinding.vod.setOnClickListener(this::onVod);
+        mBinding.doh.setOnClickListener(this::setDoh);
         mBinding.live.setOnClickListener(this::onLive);
         mBinding.wall.setOnClickListener(this::onWall);
+        mBinding.size.setOnClickListener(this::setSize);
         mBinding.cache.setOnClickListener(this::onCache);
         mBinding.backup.setOnClickListener(this::onBackup);
         mBinding.player.setOnClickListener(this::onPlayer);
@@ -123,14 +125,13 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
         mBinding.live.setOnLongClickListener(this::onLiveEdit);
         mBinding.liveHome.setOnClickListener(this::onLiveHome);
         mBinding.wall.setOnLongClickListener(this::onWallEdit);
+        mBinding.incognito.setOnClickListener(this::setIncognito);
         mBinding.vodHistory.setOnClickListener(this::onVodHistory);
         mBinding.version.setOnLongClickListener(this::onVersionDev);
         mBinding.liveHistory.setOnClickListener(this::onLiveHistory);
         mBinding.wallDefault.setOnClickListener(this::setWallDefault);
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
-        mBinding.incognito.setOnClickListener(this::setIncognito);
-        mBinding.size.setOnClickListener(this::setSize);
-        mBinding.doh.setOnClickListener(this::setDoh);
+        mBinding.wallRefresh.setOnLongClickListener(this::onWallHistory);
     }
 
     @Override
@@ -155,6 +156,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
                 mBinding.liveUrl.setText(config.getDesc());
                 break;
             case 2:
+                Setting.putWall(0);
                 Notify.progress(requireActivity());
                 WallConfig.load(config, getCallback(2));
                 mBinding.wallUrl.setText(config.getDesc());
@@ -275,24 +277,19 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     }
 
     private void setWallDefault(View view) {
-        WallConfig.refresh(Setting.getWall() == 4 ? 1 : Setting.getWall() + 1);
+        Setting.putWall(Setting.getWall() == 4 ? 1 : Setting.getWall() + 1);
+        RefreshEvent.wall();
     }
 
     private void setWallRefresh(View view) {
+        Setting.putWall(0);
         Notify.progress(requireActivity());
-        WallConfig.get().load(new Callback() {
-            @Override
-            public void success() {
-                Notify.dismiss();
-                setCacheText();
-            }
+        WallConfig.get().load(getCallback(2));
+    }
 
-            @Override
-            public void error(String msg) {
-                Notify.dismiss();
-                Notify.show(msg);
-            }
-        });
+    private boolean onWallHistory(View view) {
+        HistoryDialog.create(this).type(type = 2).show();
+        return true;
     }
 
     private void setIncognito(View view) {
@@ -366,7 +363,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     }
 
     private void initConfig() {
-        WallConfig.get().init();
+        WallConfig.get().init().load();
         LiveConfig.get().init().load();
         VodConfig.get().init().load(getCallback(0));
     }

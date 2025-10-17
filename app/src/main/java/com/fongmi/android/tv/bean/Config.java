@@ -195,13 +195,7 @@ public class Config {
     }
 
     public static void delete(String url, int type) {
-        if (type != 2) {
-            AppDatabase.get().getConfigDao().delete(url, type);
-        } else {
-            Path.clear(FileUtil.getWall(0));
-            Path.clear(FileUtil.getWallCache());
-            AppDatabase.get().getConfigDao().delete(type);
-        }
+        AppDatabase.get().getConfigDao().delete(url, type);
     }
 
     public static Config vod() {

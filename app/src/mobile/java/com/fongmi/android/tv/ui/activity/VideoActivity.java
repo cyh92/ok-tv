@@ -124,6 +124,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private Observer<Result> mObserveSearch;
     private EpisodeAdapter mEpisodeAdapter;
     private QualityAdapter mQualityAdapter;
+    private ValueAnimator mHeightAnimator;
     private ControlDialog mControlDialog;
     private QuickAdapter mQuickAdapter;
     private ParseAdapter mParseAdapter;
@@ -276,6 +277,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        ViewCompat.setOnApplyWindowInsetsListener(mBinding.getRoot(), (v, insets) -> setStatusBar(insets));
         mKeyDown = CustomKeyDown.create(this, mBinding.exo);
         mFrameParams = mBinding.video.getLayoutParams();
         mBinding.progressLayout.showProgress();
@@ -297,6 +299,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         setViewModel();
         showProgress();
         showDanmaku();
+        setAnimator();
         checkId();
     }
 
@@ -347,6 +350,14 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mBinding.control.seek.setListener(mPlayers);
     }
 
+    private WindowInsetsCompat setStatusBar(WindowInsetsCompat insets) {
+        int top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+        ViewGroup.LayoutParams lp = mBinding.statusBar.getLayoutParams();
+        lp.height = top;
+        mBinding.statusBar.setLayoutParams(lp);
+        return insets;
+    }
+
     private void setRecyclerView() {
         mBinding.flag.setHasFixedSize(true);
         mBinding.flag.setItemAnimator(null);
@@ -378,13 +389,6 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mBinding.control.action.danmaku.setVisibility(Setting.isDanmakuLoad() ? View.VISIBLE : View.GONE);
         mBinding.control.action.reset.setText(ResUtil.getStringArray(R.array.select_reset)[Setting.getReset()]);
         mBinding.video.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> mPiP.update(this, view));
-        ViewCompat.setOnApplyWindowInsetsListener(mBinding.getRoot(), (v, windowInsets) -> {
-            int top = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
-            ViewGroup.LayoutParams lp = mBinding.statusBar.getLayoutParams();
-            lp.height = top;
-            mBinding.statusBar.setLayoutParams(lp);
-            return windowInsets;
-        });
     }
 
     private void setVideoView(boolean isInPictureInPictureMode) {
@@ -393,6 +397,15 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         } else {
             mBinding.video.setLayoutParams(mFrameParams);
         }
+    }
+
+    private void setAnimator() {
+        mHeightAnimator = new ValueAnimator();
+        mHeightAnimator.setInterpolator(new DecelerateInterpolator());
+        mHeightAnimator.addUpdateListener(animation -> {
+            mFrameParams.height = (int) animation.getAnimatedValue();
+            mBinding.video.setLayoutParams(mFrameParams);
+        });
     }
 
     private void setDecode() {
@@ -667,7 +680,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     }
 
     private void onBack() {
-        if (isFullscreen()) toggleFullscreen();
+        if (isFullscreen()) exitFullscreen();
         else finish();
     }
 
@@ -860,11 +873,6 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         else onRefresh();
     }
 
-    private void toggleFullscreen() {
-        if (isFullscreen()) exitFullscreen();
-        else enterFullscreen();
-    }
-
     private boolean shouldEnterFullscreen(Episode item) {
         boolean enter = !isFullscreen() && item.isActivated();
         if (enter) enterFullscreen();
@@ -874,7 +882,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private void enterFullscreen() {
         if (isFullscreen()) return;
         if (isLand()) setTransition();
-        mBinding.video.postDelayed(() -> mBinding.video.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)), 100);
+        mBinding.video.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
         setRequestedOrientation(mPlayers.isPortrait() ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         mBinding.control.title.setVisibility(View.VISIBLE);
         setRotate(mPlayers.isPortrait(), true);
@@ -949,7 +957,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     }
 
     private void showControl() {
-        if (mPiP.isInMode(this)) return;
+        if (isInPictureInPictureMode()) return;
         mBinding.control.danmaku.setVisibility(isLock() || !mPlayers.haveDanmaku() ? View.GONE : View.VISIBLE);
         mBinding.control.setting.setVisibility(mHistory == null || isFullscreen() ? View.GONE : View.VISIBLE);
         mBinding.control.right.rotate.setVisibility(isFullscreen() && !isLock() ? View.VISIBLE : View.GONE);
@@ -1180,7 +1188,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
                 mClock.setCallback(this);
                 break;
             case PlayerEvent.SIZE:
-                checkHeight();
+                mBinding.video.post(this::changeHeight);
                 checkOrientation();
                 break;
         }
@@ -1200,25 +1208,21 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         }
     }
 
-    private void checkHeight() {
-        if (isLand() || isFullscreen() || mPlayers.getVideoHeight() == 0) return;
-        mBinding.video.post(this::changeHeight);
-    }
-
     private void changeHeight() {
+        if (isLand() || isFullscreen() || isInPictureInPictureMode()) return;
+        int videoWidth = mPlayers.getVideoWidth();
+        int videoHeight = mPlayers.getVideoHeight();
+        if (videoWidth == 0 || videoHeight == 0) return;
         int minHeight = ResUtil.dp2px(150);
         int maxHeight = ResUtil.getScreenHeight() / 2;
         int parentWidth = ((View) mBinding.video.getParent()).getWidth();
-        int calculated = (int) (parentWidth * ((float) mPlayers.getVideoHeight() / mPlayers.getVideoWidth()));
+        int calculated = (int) (parentWidth * ((float) videoHeight / videoWidth));
         int finalHeight = Math.max(minHeight, Math.min(maxHeight, calculated));
-        ValueAnimator animator = ValueAnimator.ofInt(mBinding.video.getHeight(), finalHeight).setDuration(300);
-        animator.setInterpolator(new DecelerateInterpolator());
-        animator.addUpdateListener(animation -> {
-            ViewGroup.LayoutParams params = mBinding.video.getLayoutParams();
-            params.height = (int) animation.getAnimatedValue();
-            mBinding.video.setLayoutParams(params);
-        });
-        animator.start();
+        if (finalHeight == mBinding.video.getHeight()) return;
+        if (mHeightAnimator.isRunning()) mHeightAnimator.cancel();
+        mHeightAnimator.setIntValues(mBinding.video.getHeight(), finalHeight);
+        mHeightAnimator.setDuration(300);
+        mHeightAnimator.start();
     }
 
     private void checkEnded(boolean notify) {
