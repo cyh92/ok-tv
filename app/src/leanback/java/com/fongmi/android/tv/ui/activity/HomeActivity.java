@@ -250,6 +250,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         items.add(Func.create(R.string.home_keep));
         items.add(Func.create(R.string.home_push));
         items.add(Func.create(R.string.home_cast));
+        items.add(Func.create(R.string.home_history_short));
         items.add(Func.create(R.string.home_setting));
         mFuncAdapter.setItems(items, new BaseDiffCallback<Func>());
     }
@@ -261,7 +262,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private void getHistory(boolean renew) {
         int historyIndex = getHistoryIndex();
         int recommendIndex = getRecommendIndex();
-        if (historyIndex == -1) {
+        if (historyIndex == 0) {
             if (!Setting.isHomeHistory()) return;
             int historyStringIndex = recommendIndex - 1;
             historyStringIndex = historyStringIndex < 0 ? 0 : historyStringIndex;
