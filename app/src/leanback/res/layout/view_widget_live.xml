@@ -15,14 +15,11 @@
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/title"
+            style="@style/Shadow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:ellipsize="marquee"
-            android:shadowColor="@color/grey_900"
-            android:shadowDx="4"
-            android:shadowDy="4"
-            android:shadowRadius="2"
             android:singleLine="true"
             android:textColor="@color/white"
             android:textSize="20sp"
@@ -91,7 +88,6 @@
         android:padding="16dp"
         android:textColor="@color/white"
         android:textSize="64sp"
-        android:textStyle="bold"
         android:visibility="gone"
         tools:text="05"
         tools:visibility="visible" />
@@ -123,7 +119,7 @@
                 android:id="@+id/position"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:includeFontPadding="false"
+                android:fontFeatureSettings="tnum"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 tools:text="00:00:00" />
@@ -141,7 +137,7 @@
                 android:id="@+id/duration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:includeFontPadding="false"
+                android:fontFeatureSettings="tnum"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 tools:text="00:00:00" />

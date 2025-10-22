@@ -290,7 +290,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     @Override
     @SuppressLint("ClickableViewAccessibility")
     protected void initEvent() {
-        mBinding.control.seek.setListener(mPlayers);
+        mBinding.control.seek.setPlayer(mPlayers);
         mBinding.desc.setOnClickListener(view -> onDesc());
         mBinding.keep.setOnClickListener(view -> onKeep());
         mBinding.video.setOnClickListener(view -> onVideo());
@@ -759,6 +759,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     }
 
     private void onReset(boolean replay) {
+        saveHistory();
         mPlayers.stop();
         mPlayers.clear();
         mClock.setCallback(null);
@@ -900,7 +901,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
 
     private void setTraffic() {
         Traffic.setSpeed(mBinding.widget.traffic);
-        App.post(mR3, Constant.INTERVAL_TRAFFIC);
+        App.post(mR3, 1000);
     }
 
     private void setR1Callback() {
@@ -912,17 +913,15 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     }
 
     private void setArtwork() {
-        ImgUtil.load(this, mHistory.getVodPic(), new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+        ImgUtil.load(this, mHistory.getVodPic(), new CustomTarget<>() {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
-                setMetadata();
             }
 
             @Override
             public void onLoadFailed(@Nullable Drawable errorDrawable) {
                 mBinding.exo.setDefaultArtwork(errorDrawable);
-                setMetadata();
             }
         });
     }
@@ -956,6 +955,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         mHistory.setVodPic(item.getVodPic());
         setScale(getScale());
         setPartAdapter();
+        setMetadata();
         setArtwork();
     }
 
@@ -966,6 +966,18 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         history.setVodName(item.getVodName());
         history.findEpisode(item.getVodFlags());
         return history;
+    }
+
+    private void saveHistory() {
+        if (mHistory == null) return;
+        if (Setting.isIncognito()) return;
+        long position = mPlayers.getPosition();
+        long duration = mPlayers.getDuration();
+        if (position >= 0 && duration > 0) {
+            mHistory.setPosition(position);
+            mHistory.setDuration(duration);
+            App.execute(() -> mHistory.merge().save());
+        }
     }
 
     private void updateHistory(Episode item, boolean replay) {
@@ -1010,8 +1022,9 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         setText(mBinding.director, R.string.detail_director, item.getVodDirector());
         mBinding.content.setMaxLines(getMaxLines());
         setPartAdapter();
-        setArtwork();
         updateKeep();
+        setArtwork();
+        setMetadata();
     }
 
     @Override
@@ -1022,10 +1035,8 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
 
     @Override
     public void onTimeChanged() {
-        long position, duration;
-        mHistory.setPosition(position = mPlayers.getPosition());
-        mHistory.setDuration(duration = mPlayers.getDuration());
-        if (position >= 0 && duration > 0 && !Setting.isIncognito()) App.execute(() -> mHistory.update());
+        long position = mPlayers.getPosition();
+        long duration = mPlayers.getDuration();
         if (mHistory.getEnding() > 0 && duration > 0 && mHistory.getEnding() + position >= duration) {
             checkEnded(false);
         }
@@ -1108,7 +1119,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         String episode = getEpisode().getName();
         boolean empty = title.equals(episode) || episode == null;
         String artist = empty ? "" : getString(R.string.play_now, episode);
-        mPlayers.setMetadata(title, artist, mHistory.getVodPic(), mBinding.exo.getDefaultArtwork());
+        mPlayers.setMetadata(title, artist, mHistory.getVodPic());
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -1244,6 +1255,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         if (isFullscreen()) showInfo();
         else hideInfo();
         mPlayers.pause();
+        saveHistory();
     }
 
     private void onPlay() {
@@ -1431,6 +1443,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     protected void onDestroy() {
         super.onDestroy();
         stopSearch();
+        saveHistory();
         mClock.release();
         mPlayers.release();
         RefreshEvent.keep();

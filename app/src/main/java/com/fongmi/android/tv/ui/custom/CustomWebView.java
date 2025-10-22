@@ -42,7 +42,6 @@ import com.fongmi.android.tv.ui.dialog.WebDialog;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.Sniffer;
 import com.github.catvod.crawler.Spider;
-import com.github.catvod.net.OkCookieJar;
 import com.github.catvod.utils.Util;
 import com.google.common.net.HttpHeaders;
 import com.orhanobut.logger.Logger;
@@ -127,7 +126,6 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     private void start(Map<String, String> headers) {
-        OkCookieJar.setAcceptThirdPartyCookies(this);
         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true);
         checkHeader(url, headers);
         loadUrl(url, headers);
@@ -135,8 +133,8 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
 
     private void checkHeader(String url, Map<String, String> headers) {
         for (String key : headers.keySet()) {
-            if (HttpHeaders.COOKIE.equalsIgnoreCase(key)) OkCookieJar.sync(url, headers.get(key));
             if (HttpHeaders.USER_AGENT.equalsIgnoreCase(key)) getSettings().setUserAgentString(headers.get(key));
+            if (HttpHeaders.COOKIE.equalsIgnoreCase(key)) CookieManager.getInstance().setCookie(url, headers.get(key));
         }
     }
 

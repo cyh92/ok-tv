@@ -124,13 +124,13 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private Observer<Result> mObserveSearch;
     private EpisodeAdapter mEpisodeAdapter;
     private QualityAdapter mQualityAdapter;
-    private ValueAnimator mHeightAnimator;
     private ControlDialog mControlDialog;
     private QuickAdapter mQuickAdapter;
     private ParseAdapter mParseAdapter;
     private ExecutorService mExecutor;
     private SiteViewModel mViewModel;
     private FlagAdapter mFlagAdapter;
+    private ValueAnimator mAnimator;
     private CustomKeyDown mKeyDown;
     private List<String> mBroken;
     private History mHistory;
@@ -306,6 +306,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     @Override
     @SuppressLint("ClickableViewAccessibility")
     protected void initEvent() {
+        mBinding.control.seek.setPlayer(mPlayers);
         mBinding.name.setOnClickListener(view -> onName());
         mBinding.more.setOnClickListener(view -> onMore());
         mBinding.actor.setOnClickListener(view -> onActor());
@@ -347,7 +348,6 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
         mBinding.control.action.getRoot().setOnTouchListener(this::onActionTouch);
         mBinding.swipeLayout.setOnRefreshListener(this::onSwipeRefresh);
-        mBinding.control.seek.setListener(mPlayers);
     }
 
     private WindowInsetsCompat setStatusBar(WindowInsetsCompat insets) {
@@ -400,9 +400,9 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     }
 
     private void setAnimator() {
-        mHeightAnimator = new ValueAnimator();
-        mHeightAnimator.setInterpolator(new DecelerateInterpolator());
-        mHeightAnimator.addUpdateListener(animation -> {
+        mAnimator = new ValueAnimator();
+        mAnimator.setInterpolator(new DecelerateInterpolator());
+        mAnimator.addUpdateListener(animation -> {
             mFrameParams.height = (int) animation.getAnimatedValue();
             mBinding.video.setLayoutParams(mFrameParams);
         });
@@ -793,6 +793,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     }
 
     private void onReset(boolean replay) {
+        saveHistory();
         mPlayers.stop();
         mPlayers.clear();
         mClock.setCallback(null);
@@ -986,7 +987,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     private void setTraffic() {
         Traffic.setSpeed(mBinding.widget.traffic);
-        App.post(mR2, Constant.INTERVAL_TRAFFIC);
+        App.post(mR2, 1000);
     }
 
     private void setOrient() {
@@ -999,17 +1000,15 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     }
 
     private void setArtwork() {
-        ImgUtil.load(this, mHistory.getVodPic(), new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+        ImgUtil.load(this, mHistory.getVodPic(), new CustomTarget<>() {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
-                setMetadata();
             }
 
             @Override
             public void onLoadFailed(@Nullable Drawable errorDrawable) {
                 mBinding.exo.setDefaultArtwork(errorDrawable);
-                setMetadata();
             }
         });
     }
@@ -1036,6 +1035,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mHistory.setVodName(item.getVodName());
         mHistory.setVodPic(item.getVodPic());
         setScale(getScale());
+        setMetadata();
         setArtwork();
     }
 
@@ -1046,6 +1046,18 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         history.setVodName(item.getVodName());
         history.findEpisode(item.getVodFlags());
         return history;
+    }
+
+    private void saveHistory() {
+        if (mHistory == null) return;
+        if (Setting.isIncognito()) return;
+        long position = mPlayers.getPosition();
+        long duration = mPlayers.getDuration();
+        if (position >= 0 && duration > 0) {
+            mHistory.setPosition(position);
+            mHistory.setDuration(duration);
+            App.execute(() -> mHistory.merge().save());
+        }
     }
 
     private void updateHistory(Episode item, boolean replay) {
@@ -1106,8 +1118,9 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         setText(mBinding.content, 0, item.getVodContent());
         setText(mBinding.director, R.string.detail_director, item.getVodDirector());
         mBinding.contentLayout.setVisibility(mBinding.content.getVisibility());
-        setArtwork();
         updateKeep();
+        setArtwork();
+        setMetadata();
     }
 
     @Override
@@ -1118,10 +1131,8 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     @Override
     public void onTimeChanged() {
-        long position, duration;
-        mHistory.setPosition(position = mPlayers.getPosition());
-        mHistory.setDuration(duration = mPlayers.getDuration());
-        if (position >= 0 && duration > 0 && !Setting.isIncognito()) App.execute(() -> mHistory.update());
+        long position = mPlayers.getPosition();
+        long duration = mPlayers.getDuration();
         if (mHistory.getEnding() > 0 && duration > 0 && mHistory.getEnding() + position >= duration) {
             checkEnded(false);
         }
@@ -1219,10 +1230,10 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         int calculated = (int) (parentWidth * ((float) videoHeight / videoWidth));
         int finalHeight = Math.max(minHeight, Math.min(maxHeight, calculated));
         if (finalHeight == mBinding.video.getHeight()) return;
-        if (mHeightAnimator.isRunning()) mHeightAnimator.cancel();
-        mHeightAnimator.setIntValues(mBinding.video.getHeight(), finalHeight);
-        mHeightAnimator.setDuration(300);
-        mHeightAnimator.start();
+        if (mAnimator.isRunning()) mAnimator.cancel();
+        mAnimator.setIntValues(mBinding.video.getHeight(), finalHeight);
+        mAnimator.setDuration(300);
+        mAnimator.start();
     }
 
     private void checkEnded(boolean notify) {
@@ -1246,7 +1257,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         String episode = getEpisode().getName();
         boolean empty = title.equals(episode) || episode == null;
         String artist = empty ? "" : getString(R.string.play_now, episode);
-        mPlayers.setMetadata(title, artist, mHistory.getVodPic(), mBinding.exo.getDefaultArtwork());
+        mPlayers.setMetadata(title, artist, mHistory.getVodPic());
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -1374,6 +1385,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private void onPaused() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mPlayers.pause();
+        saveHistory();
     }
 
     private void onPlay() {
@@ -1673,6 +1685,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     protected void onDestroy() {
         super.onDestroy();
         stopSearch();
+        saveHistory();
         mClock.release();
         mPlayers.release();
         Timer.get().reset();

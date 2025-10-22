@@ -103,7 +103,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownVod.Liste
     @Override
     @SuppressLint("ClickableViewAccessibility")
     protected void initEvent() {
-        mBinding.control.seek.setListener(mPlayers);
+        mBinding.control.seek.setPlayer(mPlayers);
         mBinding.control.speed.setUpListener(this::onSpeedAdd);
         mBinding.control.speed.setDownListener(this::onSpeedSub);
         mBinding.control.text.setUpListener(this::onSubtitleClick);
@@ -269,7 +269,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownVod.Liste
 
     private void setTraffic() {
         Traffic.setSpeed(mBinding.widget.traffic);
-        App.post(mR2, Constant.INTERVAL_TRAFFIC);
+        App.post(mR2, 1000);
     }
 
     private void setR1Callback() {
@@ -341,7 +341,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownVod.Liste
     }
 
     private void setMetadata() {
-        mPlayers.setMetadata(mBinding.widget.title.getText().toString(), "", "", mBinding.exo.getDefaultArtwork());
+        mPlayers.setMetadata(mBinding.widget.title.getText().toString(), "", "");
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

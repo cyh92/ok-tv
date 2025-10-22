@@ -171,7 +171,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     @Override
     @SuppressLint("ClickableViewAccessibility")
     protected void initEvent() {
-        mBinding.control.seek.setListener(mPlayers);
+        mBinding.control.seek.setPlayer(mPlayers);
         mBinding.control.back.setOnClickListener(view -> onBack());
         mBinding.control.cast.setOnClickListener(view -> onCast());
         mBinding.control.info.setOnClickListener(view -> onInfo());
@@ -537,7 +537,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     private void setTraffic() {
         Traffic.setSpeed(mBinding.widget.traffic);
-        App.post(mR2, Constant.INTERVAL_TRAFFIC);
+        App.post(mR2, 1000);
     }
 
     private void setR1Callback() {
@@ -564,12 +564,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
-                setMetadata();
             }
             @Override
             public void onLoadFailed(@Nullable Drawable errorDrawable) {
                 mBinding.exo.setDefaultArtwork(errorDrawable);
-                setMetadata();
             }
         });
     }
@@ -593,6 +591,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         } else {
             mGroup.setPosition(mChannelAdapter.setSelected(item.group(mGroup)));
             mChannel = item;
+            setMetadata();
             setArtwork();
             showInfo();
             hideUI();
@@ -639,6 +638,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private void setInfo() {
         mViewModel.getEpg(mChannel);
         mBinding.widget.play.setText("");
+        mBinding.widget.name.setMaxEms(48);
         mChannel.loadLogo(mBinding.widget.logo);
         mBinding.control.title.setSelected(true);
         mBinding.widget.name.setText(mChannel.getName());
@@ -954,7 +954,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private void setMetadata() {
         String title = mBinding.widget.name.getText().toString();
         String artist = mBinding.widget.play.getText().toString();
-        mPlayers.setMetadata(title, artist, mChannel.getLogo(), mBinding.exo.getDefaultArtwork());
+        mPlayers.setMetadata(title, artist, mChannel.getLogo());
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

@@ -28,25 +28,6 @@ public class DeviceAdapter extends BaseDiffAdapter<Device, DeviceAdapter.ViewHol
         boolean onLongClick(Device item);
     }
 
-    @Override
-    public void addItem(Device item) {
-        super.addItem(item);
-        sort(new Device.Sorter());
-    }
-
-    @Override
-    public void addItems(List<Device> items) {
-        if (items.isEmpty()) return;
-        super.addItems(items);
-        sort(new Device.Sorter());
-    }
-
-    @Override
-    public void clear() {
-        super.clear();
-        Device.delete();
-    }
-
     public List<String> getIps() {
         List<String> ips = new ArrayList<>();
         for (Device item : getItems()) if (item.isApp()) ips.add(item.getIp());

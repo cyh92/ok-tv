@@ -210,6 +210,11 @@ public class History implements Diffable<History> {
         this.cid = cid;
     }
 
+    public History cid(int cid) {
+        setCid(cid);
+        return this;
+    }
+
     public String getSiteName() {
         return VodConfig.get().getSite(getSiteKey()).getName();
     }
@@ -254,38 +259,46 @@ public class History implements Diffable<History> {
         return AppDatabase.get().getHistoryDao().find(VodConfig.getCid(), key);
     }
 
+    public static List<History> findByName(String name) {
+        try {
+            return AppDatabase.get().getHistoryDao().findByName(VodConfig.getCid(), name);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
     public static void delete(int cid) {
         AppDatabase.get().getHistoryDao().delete(cid);
     }
 
-    private void checkParam(History item) {
-        if (getOpening() <= 0) setOpening(item.getOpening());
-        if (getEnding() <= 0) setEnding(item.getEnding());
-        if (getSpeed() == 1) setSpeed(item.getSpeed());
+    private boolean shouldMerge(History item, boolean force) {
+        if (!force && getKey().equals(item.getKey())) return false;
+        if (getDuration() <= 0 || item.getDuration() <= 0) return true;
+        return Math.abs(getDuration() - item.getDuration()) <= TimeUnit.MINUTES.toMillis(10);
     }
 
-    private void merge(List<History> items, boolean force) {
-        for (History item : items) {
-            if (getDuration() > 0 && item.getDuration() > 0 && Math.abs(getDuration() - item.getDuration()) > TimeUnit.MINUTES.toMillis(10)) continue;
-            if (!force && getKey().equals(item.getKey())) continue;
-            checkParam(item);
-            item.delete();
-        }
+    private History copyTo(History item) {
+        if (getOpening() > 0) item.setOpening(getOpening());
+        if (getEnding() > 0) item.setEnding(getEnding());
+        if (getSpeed() != 1) item.setSpeed(getSpeed());
+        return this;
     }
 
-    public void update() {
-        merge(find(), false);
-        save();
+    public History merge() {
+        return merge(false);
     }
 
-    public History update(int cid) {
-        return update(cid, find());
+    private History merge(boolean force) {
+        return merge(findByName(getVodName()), force);
     }
 
-    public History update(int cid, List<History> items) {
-        setCid(cid);
-        merge(items, true);
-        return save();
+    private History merge(List<History> items, boolean force) {
+        for (History item : items) if (item.shouldMerge(this, force)) item.copyTo(this).delete();
+        return this;
+    }
+
+    public History save(int cid) {
+        return cid(cid).merge(true).save();
     }
 
     public History save() {
@@ -299,26 +312,19 @@ public class History implements Diffable<History> {
         return this;
     }
 
-    public List<History> find() {
-        return AppDatabase.get().getHistoryDao().findByName(VodConfig.getCid(), getVodName());
-    }
-
     public void findEpisode(List<Flag> flags) {
-        if (!flags.isEmpty()) {
-            setVodFlag(flags.get(0).getFlag());
-            if (!flags.get(0).getEpisodes().isEmpty()) {
-                setVodRemarks(flags.get(0).getEpisodes().get(0).getName());
-            }
-        }
-        for (History item : find()) {
+        if (flags.isEmpty()) return;
+        setVodFlag(flags.get(0).getFlag());
+        if (!flags.get(0).getEpisodes().isEmpty()) setVodRemarks(flags.get(0).getEpisodes().get(0).getName());
+        for (History item : findByName(getVodName())) {
             if (getPosition() > 0) break;
             for (Flag flag : flags) {
                 Episode episode = flag.find(item.getVodRemarks(), true);
                 if (episode == null) continue;
+                item.copyTo(this);
                 setVodFlag(flag.getFlag());
                 setPosition(item.getPosition());
                 setVodRemarks(episode.getName());
-                checkParam(item);
                 break;
             }
         }
@@ -326,16 +332,19 @@ public class History implements Diffable<History> {
 
     private static void startSync(List<History> targets) {
         for (History target : targets) {
-            List<History> items = target.find();
+            List<History> items = findByName(target.getVodName());
             if (items.isEmpty()) {
-                target.update(VodConfig.getCid(), items);
+                target.cid(VodConfig.getCid()).save();
                 continue;
             }
+            long latestLocalTime = 0;
             for (History item : items) {
-                if (target.getCreateTime() > item.getCreateTime()) {
-                    target.update(VodConfig.getCid(), items);
-                    break;
+                if (item.getCreateTime() > latestLocalTime) {
+                    latestLocalTime = item.getCreateTime();
                 }
+            }
+            if (target.getCreateTime() > latestLocalTime) {
+                target.cid(VodConfig.getCid()).merge(items, true).save();
             }
         }
     }

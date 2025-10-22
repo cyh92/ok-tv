@@ -10,9 +10,10 @@ android {
     defaultConfig {
         applicationId "com.fongmi.android.tv"
         minSdk 24
-        targetSdk 36
-        versionCode 449
-        versionName "4.4.9"
+        //noinspection ExpiredTargetSdkVersion
+        targetSdk 28
+        versionCode 459
+        versionName "4.5.9"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]
@@ -108,6 +109,7 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer-smoothstreaming:' + media3Version
     implementation 'androidx.media3:media3-extractor:' + media3Version
     implementation 'androidx.media3:media3-ui:' + media3Version
+    implementation 'androidx.palette:palette:1.0.0'
     implementation 'androidx.room:room-runtime:2.8.2'
     implementation 'cat.ereza:customactivityoncrash:2.4.0'
     implementation 'com.airbnb.android:lottie:6.6.10'
@@ -117,12 +119,9 @@ dependencies {
     implementation 'com.github.bumptech.glide:avif-integration:' + glideVersion
     implementation 'com.github.bumptech.glide:okhttp3-integration:' + glideVersion
     implementation 'com.github.jahirfiquitiva:TextDrawable:1.0.3'
-    implementation 'com.github.thegrizzlylabs:sardine-android:0.9'
     implementation 'com.github.teamnewpipe:NewPipeExtractor:v0.24.8'
     implementation 'com.google.android.material:material:1.13.0'
-    implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.guolindev.permissionx:permissionx:1.8.1'
-    implementation 'com.hierynomus:smbj:0.14.0'
     implementation 'io.antmedia:rtmp-client:3.2.0'
     implementation 'io.github.anilbeesetti:nextlib-media3ext:1.8.0-0.9.0'
     implementation 'javax.servlet:javax.servlet-api:3.1.0'
