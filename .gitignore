@@ -8,4 +8,5 @@ lib-*.aar
 /local.properties
 app/leanback
 app/leanbackArm64_v8a
+app/leanbackArmeabi_v7a
 app/mobileArm64_v8a
