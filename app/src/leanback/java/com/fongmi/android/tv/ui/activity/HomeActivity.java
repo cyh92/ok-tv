@@ -265,11 +265,12 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (historyIndex == 0) {
             if (!Setting.isHomeHistory()) return;
             int historyStringIndex = recommendIndex - 1;
-            historyStringIndex = historyStringIndex < 0 ? 0 : historyStringIndex;
+//            historyStringIndex = historyStringIndex < 0 ? 0 : historyStringIndex;
             mAdapter.add(historyStringIndex, R.string.home_history);
         }
         if (!Setting.isHomeHistory()) {
-            mAdapter.removeItems(historyIndex - 1, 2);
+            //在最近观看存在数据时移除“最近观看”标签和观看的视频详情两行
+            mAdapter.removeItems(historyIndex - 1, mHistoryAdapter.size()>0?2:1);
             return;
         }
         List<History> items = History.get();
