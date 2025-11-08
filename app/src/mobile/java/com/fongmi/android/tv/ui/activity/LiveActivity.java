@@ -28,6 +28,7 @@ import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.bean.CastVideo;
 import com.fongmi.android.tv.bean.Channel;
+import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Epg;
 import com.fongmi.android.tv.bean.EpgData;
 import com.fongmi.android.tv.bean.Group;
@@ -40,6 +41,7 @@ import com.fongmi.android.tv.event.ErrorEvent;
 import com.fongmi.android.tv.event.PlayerEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
+import com.fongmi.android.tv.impl.ConfigCallback;
 import com.fongmi.android.tv.impl.CustomTarget;
 import com.fongmi.android.tv.impl.LiveCallback;
 import com.fongmi.android.tv.impl.PassCallback;
@@ -47,7 +49,6 @@ import com.fongmi.android.tv.model.LiveViewModel;
 import com.fongmi.android.tv.player.Players;
 import com.fongmi.android.tv.player.Source;
 import com.fongmi.android.tv.player.exo.ExoUtil;
-import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.adapter.ChannelAdapter;
 import com.fongmi.android.tv.ui.adapter.EpgDataAdapter;
@@ -55,6 +56,7 @@ import com.fongmi.android.tv.ui.adapter.GroupAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDown;
 import com.fongmi.android.tv.ui.dialog.CastDialog;
+import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.InfoDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
@@ -84,7 +86,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener, TrackDialog.Listener, Biometric.Callback, PassCallback, LiveCallback, GroupAdapter.OnClickListener, ChannelAdapter.OnClickListener, EpgDataAdapter.OnClickListener, CastDialog.Listener, InfoDialog.Listener {
+public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener, TrackDialog.Listener, Biometric.Callback, PassCallback, ConfigCallback, LiveCallback, GroupAdapter.OnClickListener, ChannelAdapter.OnClickListener, EpgDataAdapter.OnClickListener, CastDialog.Listener, InfoDialog.Listener {
 
     private ActivityLiveBinding mBinding;
     private ChannelAdapter mChannelAdapter;
@@ -112,7 +114,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private WebViewPlayer webPlayer;
 
     public static void start(Context context) {
-        if (!LiveConfig.isEmpty()) context.startActivity(new Intent(context, LiveActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("empty", false));
+        context.startActivity(new Intent(context, LiveActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("empty", LiveConfig.isEmpty()));
     }
 
     private boolean isEmpty() {
@@ -161,7 +163,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mR2 = this::setTraffic;
         mR3 = this::hideInfo;
         mPiP = new PiP();
-        Server.get().start();
         setRecyclerView();
         setVideoView();
         setViewModel();
@@ -187,6 +188,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.control.action.line.setOnClickListener(view -> onLine());
         mBinding.control.action.scale.setOnClickListener(view -> onScale());
         mBinding.control.action.speed.setOnClickListener(view -> onSpeed());
+        mBinding.control.action.config.setOnClickListener(view -> onConfig());
         mBinding.control.action.invert.setOnClickListener(view -> onInvert());
         mBinding.control.action.across.setOnClickListener(view -> onAcross());
         mBinding.control.action.change.setOnClickListener(view -> onChange());
@@ -252,7 +254,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mViewModel.epg.observeForever(mObserveEpg);
         mViewModel.live.observe(this, live -> {
             mViewModel.getXml(live);
-            hideProgress();
             setGroup(live);
             setWidth(live);
         });
@@ -362,6 +363,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     private void onLock() {
         setLock(!isLock());
+        setRequestedOrientation(getLockOrient());
         mKeyDown.setLock(isLock());
         checkLockImg();
         showControl();
@@ -412,6 +414,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         return true;
     }
 
+    private void onConfig() {
+        HistoryDialog.create(this).readOnly().type(1).show();
+        hideControl();
+    }
+
     private void onInvert() {
         setR1Callback();
         Setting.putInvert(!Setting.isInvert());
@@ -442,6 +449,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private boolean onTextLong() {
+        if (!mPlayers.haveTrack(C.TRACK_TYPE_TEXT)) return false;
         onSubtitleClick();
         return true;
     }
@@ -449,6 +457,16 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private boolean onActionTouch(View v, MotionEvent e) {
         if (e.getAction() == MotionEvent.ACTION_UP) setR1Callback();
         return false;
+    }
+
+    private int getLockOrient() {
+        if (isLock()) {
+            return ResUtil.getScreenOrientation(this);
+        } else if (isRotate()) {
+            return ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT;
+        } else {
+            return ResUtil.isLand(this) ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT;
+        }
     }
 
     private void hideUI() {
@@ -588,7 +606,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     public void onItemClick(Channel item) {
         if (!item.getData().getList().isEmpty() && item.isSelected() && mChannel != null && mChannel.equals(item) && mChannel.getGroup().equals(mGroup)) {
             showEpg(item);
-        } else {
+        } else if (mGroup != null) {
             mGroup.setPosition(mChannelAdapter.setSelected(item.group(mGroup)));
             mChannel = item;
             setMetadata();
@@ -850,6 +868,34 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     public void onSubtitleClick() {
         App.post(this::hideControl, 200);
         App.post(() -> SubtitleDialog.create().view(mBinding.exo.getSubtitleView()).full(true).show(this), 200);
+    }
+
+    @Override
+    public void setConfig(Config config) {
+        Config current = LiveConfig.get().getConfig();
+        LiveConfig.load(config, getCallback(current));
+    }
+
+    private Callback getCallback(Config config) {
+        return new Callback() {
+            @Override
+            public void start() {
+                showProgress();
+            }
+
+            @Override
+            public void success() {
+                RefreshEvent.config();
+                setLive(getHome());
+            }
+
+            @Override
+            public void error(String msg) {
+                LiveConfig.get().config(config).load();
+                Notify.show(msg);
+                hideProgress();
+            }
+        };
     }
 
     @Override
@@ -1229,13 +1275,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.exo.setPlayer(mPlayers.get());
         setAudioOnly(false);
         setStop(false);
-        onPlay();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (isRedirect()) onPlay();
         setRedirect(false);
     }
 
@@ -1267,8 +1311,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onDestroy() { 
         webPlayer.destroy();
         mPlayers.release();
         Source.get().exit();
@@ -1276,5 +1319,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         App.removeCallbacks(mR1, mR2, mR3);
         mViewModel.url.removeObserver(mObserveUrl);
         mViewModel.epg.removeObserver(mObserveEpg);
+        super.onDestroy();
     }
 }
