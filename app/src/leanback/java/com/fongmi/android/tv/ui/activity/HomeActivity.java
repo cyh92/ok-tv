@@ -202,7 +202,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private void setHomeType() {
         com.fongmi.android.tv.bean.Class home = new com.fongmi.android.tv.bean.Class();
         home.setTypeId("home");
-        home.setTypeName("首页");
+        home.setTypeName(ResUtil.getString(R.string.vod_home));
         mTabAdapter.add(home);
     }
 

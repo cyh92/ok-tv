@@ -5,6 +5,7 @@
 
     <!-- Vod -->
     <string name="vod_last">Last seen <xliff:g name="name">%s</xliff:g></string>
+    <string name="vod_home">Home</string>
 
     <!-- Live -->
     <string name="live_pass">Pass</string>

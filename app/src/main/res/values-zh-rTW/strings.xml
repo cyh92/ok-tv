@@ -5,6 +5,7 @@
 
     <!-- Vod -->
     <string name="vod_last">上次看到<xliff:g name="name">%s</xliff:g></string>
+    <string name="vod_home">推薦</string>
 
     <!-- Live -->
     <string name="live_pass">密碼</string>
