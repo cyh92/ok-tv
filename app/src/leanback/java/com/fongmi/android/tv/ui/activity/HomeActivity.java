@@ -125,6 +125,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mBinding.progressLayout.showProgress();
         Updater.create().start(this);
         Tbs.init();
+        setTitleView();//根据UI风格改变文字大小
         setRecyclerView();
         setViewModel();
         setHomeType();//首页菜单
@@ -164,6 +165,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @SuppressLint("RestrictedApi")
     private void setRecyclerView() {
+        setHomeUI();
         CustomSelector selector = new CustomSelector();
         selector.addPresenter(Integer.class, new HeaderPresenter());
         selector.addPresenter(String.class, new ProgressPresenter());
@@ -183,6 +185,19 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             setTypes();
         });
     }
+    private void setHomeUI() {
+        if (Setting.getHomeUI() == 0) mBinding.tabMenu.setVisibility(View.GONE);
+        else mBinding.tabMenu.setVisibility(View.VISIBLE);
+    }
+    private void setTitleView() {
+        if (Setting.getHomeUI() == 0) {
+            mBinding.title.setTextSize(24);
+            mBinding.clock.setTextSize(24);
+        } else {
+            mBinding.title.setTextSize(20);
+            mBinding.clock.setTextSize(20);
+        }
+    }
     //首页菜单
     private void setHomeType() {
         com.fongmi.android.tv.bean.Class home = new com.fongmi.android.tv.bean.Class();
@@ -193,7 +208,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private List<Class> getTypes(Result result) {
         List<Class> items = new ArrayList<>();
-        for (String cate : getSite().getCategories()) for (Class item : result.getTypes()) if (cate.equals(item.getTypeName())) items.add(item);
+        for (String cate : getSite().getCategories())
+            for (Class item : result.getTypes())
+                if (cate.equals(item.getTypeName())) items.add(item);
         return items;
     }
 
@@ -306,7 +323,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void setFunc() {
         List<Func> items = new ArrayList<>();
-        items.add(Func.create(R.string.home_vod));
+        if (Setting.getHomeUI() == 0)items.add(Func.create(R.string.home_vod));
         if (LiveConfig.hasUrl()) items.add(Func.create(R.string.home_live));
         items.add(Func.create(R.string.home_search));
         items.add(Func.create(R.string.home_keep));
@@ -527,6 +544,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     protected void onResume() {
         super.onResume();
         mClock.start();
+        setTitleView();
+        setHomeUI();
+        setFunc();
     }
 
     @Override

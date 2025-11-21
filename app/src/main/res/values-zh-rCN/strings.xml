@@ -206,4 +206,9 @@
         <item>选择字幕</item>
     </string-array>
 
+    <string-array name="select_home_ui">
+        <item>简洁风格</item>
+        <item>TVBox风格</item>
+    </string-array>
+
 </resources>

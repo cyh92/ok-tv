@@ -212,4 +212,8 @@
         <item>Select subtitle track</item>
     </string-array>
 
+    <string-array name="select_home_ui">
+        <item>Simple style</item>
+        <item>TVBox style</item>
+    </string-array>
 </resources>

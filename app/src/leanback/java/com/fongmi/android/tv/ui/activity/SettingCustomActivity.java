@@ -8,12 +8,14 @@ import android.view.View;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.databinding.ActivitySettingCustomBinding;
 import com.fongmi.android.tv.impl.X5WebViewCallback;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.dialog.X5WebViewDialog;
 import com.fongmi.android.tv.utils.Notify;
+import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.tencent.smtt.sdk.QbSdk;
 
@@ -22,6 +24,8 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
     private String[] parseWebview = {"系统", "X5 WebView"};
 
     private String[] historyText = {"开启", "关闭"};
+
+    private String[] homeUI;
 
     @Override
     protected ViewBinding getBinding() {
@@ -37,6 +41,7 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
         mBinding.parseWebviewText.setText(parseWebview[Setting.getParseWebView()]);
         mBinding.homeHistoryText.setText(Setting.isHomeHistory()? historyText[0] : historyText[1]);
         mBinding.autoStartText.setText(Setting.isAutoStart()? "开启" : "关闭");
+        mBinding.homeUIText.setText((homeUI = ResUtil.getStringArray(R.array.select_home_ui))[Setting.getHomeUI()]);
     }
 
     @Override
@@ -44,7 +49,16 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
         mBinding.parseWebview.setOnClickListener(this::setParseWebview);
         mBinding.homeHistory.setOnClickListener(this::setHomeHistory);
         mBinding.autoStart.setOnClickListener(this::setAutoStart);
+        mBinding.homeUI.setOnClickListener(this::setHomeUI);
     }
+
+    //首页UI
+    private void setHomeUI(View view) {
+        int index = Setting.getHomeUI();
+        Setting.putHomeUI(index = index == homeUI.length - 1 ? 0 : ++index);
+        mBinding.homeUIText.setText(homeUI[index]);
+    }
+
     //设置开机自启动
     private void setAutoStart(View view) {
         Setting.putAutoStart(!Setting.isAutoStart());
