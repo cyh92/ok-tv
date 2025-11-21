@@ -38,6 +38,7 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
 
     @Override
     protected void initView() {
+        mBinding.homeUI.requestFocus();
         mBinding.parseWebviewText.setText(parseWebview[Setting.getParseWebView()]);
         mBinding.homeHistoryText.setText(Setting.isHomeHistory()? historyText[0] : historyText[1]);
         mBinding.autoStartText.setText(Setting.isAutoStart()? "开启" : "关闭");
