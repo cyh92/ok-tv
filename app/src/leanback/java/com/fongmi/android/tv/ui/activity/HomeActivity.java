@@ -78,6 +78,7 @@ import org.greenrobot.eventbus.ThreadMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class HomeActivity extends BaseActivity implements CustomTitleView.Listener, TypePresenter.OnClickListener, VodPresenter.OnClickListener, FuncPresenter.OnClickListener, HistoryPresenter.OnClickListener {
@@ -213,24 +214,17 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 if (cate.equals(item.getTypeName())) items.add(item);
         return items;
     }
-
-    private void setTypes() {
-        if (mResult == null || mResult.getTypes().isEmpty()) return;
-        
-        // 获取过滤后的分类数据
-        List<Class> filteredTypes = getTypes(mResult);
-        mResult.setTypes(filteredTypes);
-        for (Class item : filteredTypes) item.setFilters(getFilter(item.getTypeId()));
-        
-        // 清理旧的分类数据（保留首页项）
-        if (mTabAdapter.size() > 1) {
-            mTabAdapter.removeItems(1, mTabAdapter.size() - 1);
-        }
-        
-        // 添加新的分类数据
-        if (!filteredTypes.isEmpty()) {
-            mTabAdapter.addAll(1, filteredTypes);
-        }
+    public void setTypes() {
+        mResult.setTypes(getTypes(mResult));
+        for (Map.Entry<String, List<Filter>> entry : mResult.getFilters().entrySet()) Prefers.put("filter_" + getSite().getKey() + "_" + entry.getKey(), App.gson().toJson(entry.getValue()));
+        for (Class item : mResult.getTypes()) item.setFilters(getFilter(item.getTypeId()));
+        if (mTabAdapter.size() > 1) mTabAdapter.removeItems(1, mTabAdapter.size() - 1);
+        if (mResult.getTypes().size() > 0) mTabAdapter.addAll(1, mResult.getTypes());
+//        setPager();
+//        mPageAdapter.notifyDataSetChanged();
+//        getHomeFragment().addVideo(result);
+//        getHomeFragment().mBinding.progressLayout.showContent();
+        App.post(() -> setFocus(), 200);
     }
 
     private List<Filter> getFilter(String typeId) {
