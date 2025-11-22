@@ -582,7 +582,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void onItemClick(Class item) {
-
+        if (!"home".equals(item.getTypeId())) {
+            VodActivity.start(this, mResult);
+        }
     }
 
     @Override
