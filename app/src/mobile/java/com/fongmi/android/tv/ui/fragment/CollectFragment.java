@@ -80,6 +80,16 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
         search();
     }
 
+    @Override
+    protected void initEvent() {
+        mBinding.toolbar.setOnClickListener(v -> {
+            Bundle result = new Bundle();
+            result.putBoolean("edit", true);
+            getParentFragmentManager().setFragmentResult("result", result);
+            getParentFragmentManager().popBackStack();
+        });
+    }
+
     private void setRecyclerView() {
         mBinding.collect.setItemAnimator(null);
         mBinding.collect.setHasFixedSize(true);
@@ -114,7 +124,6 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     }
 
     private void search() {
-        mViewModel.stopSearch();
         if (mSites.isEmpty()) return;
         mCollectAdapter.setItems(List.of(Collect.all()), () -> mViewModel.searchContent(mSites, getKeyword(), false));
     }

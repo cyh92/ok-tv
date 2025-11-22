@@ -54,17 +54,17 @@ public class Url {
     }
 
     public Url add(String v) {
-        getValues().add(new Value("", v));
+        getValues().add(Value.create(v));
         return this;
     }
 
     public Url add(String n, String v) {
-        getValues().add(new Value(n, v));
+        getValues().add(Value.create(n, v));
         return this;
     }
 
     public Url replace(String url) {
-        if (isEmpty()) add(url);
+        if (getValues().isEmpty()) add(url);
         else getValues().get(getPosition()).setV(url);
         return this;
     }
