@@ -33,6 +33,7 @@ import com.fongmi.android.tv.bean.EpgData;
 import com.fongmi.android.tv.bean.Group;
 import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.bean.Live;
+import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.databinding.ActivityLiveBinding;
 import com.fongmi.android.tv.event.ActionEvent;
@@ -89,7 +90,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private ArrayObjectAdapter mChannelAdapter;
     private ArrayObjectAdapter mEpgDataAdapter;
     private ArrayObjectAdapter mGroupAdapter;
-    private Observer<Channel> mObserveUrl;
+    private Observer<Result> mObserveUrl;
     private CustomKeyDownLive mKeyDown;
     private Observer<Epg> mObserveEpg;
     private LiveViewModel mViewModel;
@@ -597,7 +598,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         if (item.isSelected()) {
             fetch(item);
         } else if (mChannel.hasCatchup()) {
-            mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getName(), item.getTitle()));
+            mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getShow(), item.getTitle()));
             Notify.show(getString(R.string.play_ready, item.getTitle()));
             setActivated(item);
             fetch(item);
@@ -633,8 +634,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         mBinding.widget.name.setMaxEms(48);
         mChannel.loadLogo(mBinding.widget.logo);
         mBinding.widget.title.setSelected(true);
-        mBinding.widget.name.setText(mChannel.getName());
-        mBinding.widget.title.setText(mChannel.getName());
+        mBinding.widget.name.setText(mChannel.getShow());
+        mBinding.widget.title.setText(mChannel.getShow());
         mBinding.widget.line.setText(mChannel.getLineText());
         mBinding.widget.number.setText(mChannel.getNumber());
         mBinding.control.line.setText(mChannel.getLineText());
@@ -646,8 +647,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         EpgData data = mChannel.getData().getEpgData();
         boolean hasTitle = !data.getTitle().isEmpty();
         mEpgDataAdapter.setItems(mChannel.getData().getList(), null);
-        if (hasTitle)
-            mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getName(), data.getTitle()));
+        if (hasTitle) mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getShow(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
         mBinding.widget.tvNextProgramName.setText(nextProgram());
@@ -680,10 +680,10 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         showProgress();
     }
 
-    private void start(Channel result) {
-        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
+    private void start(Result result) {
+//        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
         
-        if (result.getMode() == 1) {
+        if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
             showWebView(result);
         } else {
@@ -691,12 +691,12 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
             webPlayer.stop();
             webPlayer.setVisibility(View.GONE);
             mBinding.exo.setVisibility(View.VISIBLE);
-            mPlayers.start(result, getTimeout());
+            mPlayers.start(result,false, getTimeout());
         }
     }
 
     // 显示WebView并加载URL
-    private void showWebView(Channel result) {
+    private void showWebView(Result result) {
         try {
             Logger.t("LiveActivity").d("初始化WebView播放器");
             webPlayer.stop();
@@ -783,7 +783,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
             onWebViewError("播放器初始化失败");
         }
     }
-    
+    //注入js脚本
     private void injectPlayerScript(WebView webView) {
         try {
             InputStream inputStream = getAssets().open("js/webview_player_impl.js");
@@ -864,7 +864,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
             @Override
             public void error(String msg) {
-                LiveConfig.get().config(config).load();
+                LiveConfig.load(config, new Callback());
                 Notify.show(msg);
                 hideProgress();
             }
@@ -1056,14 +1056,14 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void prevLine() {
         if (mChannel == null || mChannel.isOnly()) return;
-        mChannel.prevLine();
+        mChannel.switchLine(false);
         showInfo();
         fetch();
     }
 
     private void nextLine(boolean show) {
         if (mChannel == null || mChannel.isOnly()) return;
-        mChannel.nextLine();
+        mChannel.switchLine(true);
         if (show) showInfo();
         else setInfo();
         fetch();
@@ -1186,7 +1186,6 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     @Override
     protected void onStart() {
         super.onStart();
-        mBinding.exo.setPlayer(mPlayers.get());
         mClock.stop().start();
     }
 
@@ -1207,7 +1206,6 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         super.onStop();
         if (Setting.isBackgroundOff()) onPaused();
         if (Setting.isBackgroundOff()) mClock.stop();
-        mBinding.exo.setPlayer(null);
     }
 
     @Override

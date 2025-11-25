@@ -1,19 +1,20 @@
 package com.fongmi.android.tv.player;
 
+import android.net.Uri;
+
 import com.fongmi.android.tv.App;
-import com.fongmi.android.tv.bean.Channel;
 import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.player.extractor.Force;
 import com.fongmi.android.tv.player.extractor.JianPian;
 import com.fongmi.android.tv.player.extractor.Push;
+import com.fongmi.android.tv.player.extractor.Strm;
 import com.fongmi.android.tv.player.extractor.TVBus;
 import com.fongmi.android.tv.player.extractor.Thunder;
 import com.fongmi.android.tv.player.extractor.Video;
-import com.fongmi.android.tv.player.extractor.Youtube;
 import com.fongmi.android.tv.player.extractor.WebView;
-import com.fongmi.android.tv.utils.UrlUtil;
+import com.fongmi.android.tv.player.extractor.Youtube;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -41,6 +42,7 @@ public class Source {
         extractors.add(new Force());
         extractors.add(new JianPian());
         extractors.add(new Push());
+        extractors.add(new Strm());
         extractors.add(new Thunder());
         extractors.add(new TVBus());
         extractors.add(new Video());
@@ -48,11 +50,8 @@ public class Source {
         extractors.add(new WebView()); // 添加新解析器
     }
 
-    private Extractor getExtractor(String url) {
-        String host = UrlUtil.host(url);
-        String scheme = UrlUtil.scheme(url);
-        for (Extractor extractor : extractors) if (extractor.match(scheme, host)) return extractor;
-        return null;
+    private Extractor getExtractor(Uri uri) {
+        return extractors.stream().filter(extractor -> extractor.match(uri)).findFirst().orElse(null);
     }
 
     private void addCallable(Iterator<Episode> iterator, List<Callable<List<Episode>>> items) {
@@ -78,19 +77,12 @@ public class Source {
     }
 
     public String fetch(Result result) throws Exception {
+        Uri uri = result.getUrl().uri();
         String url = result.getUrl().v();
-        Extractor extractor = getExtractor(url);
+        Extractor extractor = getExtractor(uri);
         if (extractor != null) result.setParse(0);
         if (extractor instanceof Video) result.setParse(1);
-        return extractor == null ? url : extractor.fetch(url);
-    }
-
-    public String fetch(Channel channel) throws Exception {
-        String url = channel.getCurrent();
-        Extractor extractor = getExtractor(url);
-        if (extractor != null) channel.setParse(0);
-        if (extractor instanceof Video) channel.setParse(1);
-        if (extractor instanceof WebView) channel.setMode(1);
+        if (extractor instanceof WebView) result.setParse(2);//WebView模式
         return extractor == null ? url : extractor.fetch(url);
     }
 
@@ -106,9 +98,9 @@ public class Source {
 
     public interface Extractor {
 
-        boolean match(String scheme, String host);
-
         String fetch(String url) throws Exception;
+
+        boolean match(Uri uri);
 
         void stop();
 

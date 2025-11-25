@@ -20,6 +20,7 @@ import android.view.ViewParent;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
+import com.fongmi.android.tv.bean.Result;
 import com.tencent.smtt.sdk.WebChromeClient;
 import com.tencent.smtt.sdk.WebSettings;
 import com.tencent.smtt.sdk.WebView;
@@ -57,13 +58,13 @@ public class WebViewPlayer extends FrameLayout {
         super(context, attrs, defStyleAttr);
         init(context);
     }
-    public void start(Channel result) {
+    public void start(Result result) {
         isVideoDetected = false;
         Logger.t(TAG).d("Starting WebView with URL: " + result.getUrl());
         Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
         Logger.t(TAG).d("触摸透明状态: " + isTouchTransparent());
         
-        webView.loadUrl(result.getUrl(), result.getHeaders());
+        webView.loadUrl(result.getUrl().v(), result.getHeaders());
         
         // 注入JavaScript禁用用户交互
         if (!isUserInteractionEnabled) {

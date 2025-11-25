@@ -34,6 +34,7 @@ import com.fongmi.android.tv.bean.EpgData;
 import com.fongmi.android.tv.bean.Group;
 import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.bean.Live;
+import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.databinding.ActivityLiveBinding;
 import com.fongmi.android.tv.event.ActionEvent;
@@ -91,7 +92,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private ActivityLiveBinding mBinding;
     private ChannelAdapter mChannelAdapter;
     private EpgDataAdapter mEpgDataAdapter;
-    private Observer<Channel> mObserveUrl;
+    private Observer<Result> mObserveUrl;
     private GroupAdapter mGroupAdapter;
     private Observer<Epg> mObserveEpg;
     private LiveViewModel mViewModel;
@@ -578,7 +579,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void setArtwork() {
-        ImgUtil.load(this, mChannel.getUrl(),R.drawable.radio, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+        ImgUtil.load(this, mChannel.getLogo(),R.drawable.radio, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
@@ -632,7 +633,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         if (item.isSelected()) {
             fetch(item);
         } else if (mChannel.hasCatchup()) {
-            mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getName(), item.getTitle()));
+            mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getShow(), item.getTitle()));
             Notify.show(getString(R.string.play_ready, item.getTitle()));
             mEpgDataAdapter.setSelected(item);
             fetch(item);
@@ -659,9 +660,9 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.widget.name.setMaxEms(48);
         mChannel.loadLogo(mBinding.widget.logo);
         mBinding.control.title.setSelected(true);
-        mBinding.widget.name.setText(mChannel.getName());
-        mBinding.control.title.setText(mChannel.getName());
-        mBinding.widget.namePip.setText(mChannel.getName());
+        mBinding.widget.name.setText(mChannel.getShow());
+        mBinding.control.title.setText(mChannel.getShow());
+        mBinding.widget.namePip.setText(mChannel.getShow());
         mBinding.widget.line.setText(mChannel.getLineText());
         mBinding.widget.number.setText(mChannel.getNumber());
         mBinding.widget.numberPip.setText(mChannel.getNumber());
@@ -674,7 +675,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         EpgData data = mChannel.getData().getEpgData();
         boolean hasTitle = !data.getTitle().isEmpty();
         mEpgDataAdapter.addAll(mChannel.getData().getList());
-        if (hasTitle) mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getName(), data.getTitle()));
+        if (hasTitle) mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getShow(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
         setWidth(mChannel.getData());
@@ -706,10 +707,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         showProgress();
     }
 
-    private void start(Channel result) {
-        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
+    private void start(Result result) {
+//        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
         
-        if (result.getMode() == 1) {
+        if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
             showWebView(result);
         } else {
@@ -717,12 +718,12 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
             webPlayer.stop();
             webPlayer.setVisibility(View.GONE);
             mBinding.exo.setVisibility(View.VISIBLE);
-            mPlayers.start(result, getTimeout());
+            mPlayers.start(result,false, getTimeout());
         }
     }
 
     // 显示WebView并加载URL
-    private void showWebView(Channel result) {
+    private void showWebView(Result result) {
         try {
             Logger.t("LiveActivity").d("初始化WebView播放器");
             webPlayer.stop();
@@ -812,7 +813,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
             onWebViewError("播放器初始化失败");
         }
     }
-    
+    //注入js脚本
     private void injectPlayerScript(WebView webView) {
         try {
             InputStream inputStream = getAssets().open("js/webview_player_impl.js");
@@ -891,7 +892,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
             @Override
             public void error(String msg) {
-                LiveConfig.get().config(config).load();
+                LiveConfig.load(config, new Callback());
                 Notify.show(msg);
                 hideProgress();
             }
@@ -1076,7 +1077,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     private void nextLine(boolean show) {
         if (mChannel == null || mChannel.isOnly()) return;
-        mChannel.nextLine();
+        mChannel.switchLine(true);
         if (show) showInfo();
         else setInfo();
         fetch();
@@ -1272,7 +1273,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     @Override
     protected void onStart() {
         super.onStart();
-        mBinding.exo.setPlayer(mPlayers.get());
         setAudioOnly(false);
         setStop(false);
     }
@@ -1294,7 +1294,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         super.onStop();
         if (Setting.isBackgroundOff()) onPaused();
         if (!isAudioOnly()) setStop(true);
-        mBinding.exo.setPlayer(null);
     }
 
     @Override

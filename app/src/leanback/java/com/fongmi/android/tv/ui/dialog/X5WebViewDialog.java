@@ -60,7 +60,7 @@ public class X5WebViewDialog  implements Download.Callback {
         confirm = true;
         binding.confirm.setEnabled(false);
         Tbs.remove();
-        Download.create(getTbs(), getFile(), this).start();
+        Download.create(getTbs(), getFile()).start(this);
     }
 
     private void dismiss() {
