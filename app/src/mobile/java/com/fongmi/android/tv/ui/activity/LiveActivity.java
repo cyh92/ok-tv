@@ -70,10 +70,18 @@ import com.fongmi.android.tv.utils.PiP;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
 import com.fongmi.android.tv.utils.Util;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
+import com.tencent.smtt.sdk.WebView;
+import com.tencent.smtt.sdk.WebViewClient;
+import com.orhanobut.logger.Logger;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -104,6 +112,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private String tag;
     private int count;
     private PiP mPiP;
+    private WebViewPlayer webPlayer;
 
     public static void start(Context context) {
         context.startActivity(new Intent(context, LiveActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("empty", LiveConfig.isEmpty()));
@@ -143,6 +152,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        webPlayer = new WebViewPlayer(this);
         mKeyDown = CustomKeyDown.create(this, mBinding.exo);
         setPadding(mBinding.control.getRoot());
         setPadding(mBinding.recycler, true);
@@ -201,6 +211,20 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void setVideoView() {
+        // Add WebViewPlayer to the video container
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer);
+        
+        Logger.t("LiveActivity").d("设置视频容器触摸监听器");
+        mBinding.video.setOnTouchListener((view, event) -> {
+            Logger.t("LiveActivity").d("视频容器收到触摸事件: " + event.getAction() + 
+                                      ", 位置: (" + event.getX() + ", " + event.getY() + ")");
+            Logger.t("LiveActivity").d("WebViewPlayer透明状态: " + webPlayer.isTouchTransparent());
+            boolean result = mKeyDown.onTouchEvent(event);
+            Logger.t("LiveActivity").d("CustomKeyDownLive处理结果: " + result);
+            return result;
+        });
+        
         mPlayers.init(mBinding.exo);
         PlaybackService.start(mPlayers);
         setScale(Setting.getLiveScale());
@@ -555,12 +579,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void setArtwork() {
-        ImgUtil.load(this, mChannel.getLogo(), new CustomTarget<>() {
+        ImgUtil.load(this, mChannel.getLogo(),R.drawable.radio, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
             }
-
             @Override
             public void onLoadFailed(@Nullable Drawable errorDrawable) {
                 mBinding.exo.setDefaultArtwork(errorDrawable);
@@ -685,7 +708,136 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void start(Result result) {
-        mPlayers.start(result, false, getTimeout());
+//        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
+        
+        if (result.getParse() == 2) {
+            Logger.t("LiveActivity").d("切换到WebView模式");
+            showWebView(result);
+        } else {
+            Logger.t("LiveActivity").d("切换到标准播放器模式");
+            webPlayer.stop();
+            webPlayer.setVisibility(View.GONE);
+            mBinding.exo.setVisibility(View.VISIBLE);
+            mPlayers.start(result,false, getTimeout());
+        }
+    }
+
+    // 显示WebView并加载URL
+    private void showWebView(Result result) {
+        try {
+            Logger.t("LiveActivity").d("初始化WebView播放器");
+            webPlayer.stop();
+            mBinding.exo.setVisibility(View.GONE);
+            webPlayer.setVisibility(View.VISIBLE);
+            webPlayer.bringToFront();
+            
+            // 检查WebViewPlayer的触摸透明状态
+            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
+            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
+            
+            // 测试触摸事件流程
+            webPlayer.testTouchEventFlow();
+            
+            // 设置回调监听
+            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
+                @Override
+                public void onVideoFound(int videoCount) {
+                    Logger.t("WebView").d("检测到 " + videoCount + " 个视频元素");
+                    hideProgress();
+                }
+                
+                @Override
+                public void onVideoPlaying() {
+                    Logger.t("WebView").d("视频开始播放");
+                    hideProgress();
+                }
+                
+                @Override
+                public void onVideoError(String error) {
+                    Logger.t("WebView").e("视频播放错误: " + error);
+                    onWebViewError(error);
+                }
+                
+                @Override
+                public void onPageLoadProgress(int progress) {
+                    if (progress < 100) {
+                        showProgress();
+                    }
+                }
+            });
+            
+            webPlayer.start(result);
+            
+            // 添加显示动画
+            webPlayer.setAlpha(0f);
+            webPlayer.animate()
+                    .alpha(1f)
+                    .setDuration(300)
+                    .start();
+            
+            webPlayer.setWebViewClient(new WebViewClient(){
+                private boolean isScriptInjected = false;
+                private final long startTime = System.currentTimeMillis();
+                private static final long TIMEOUT_MS = 30000; // 30秒超时
+
+                @Override
+                public void onPageFinished(WebView webView, String url) {
+                    super.onPageFinished(webView, url);
+                    
+                    // 检查超时
+                    if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
+                        Logger.t("WebView").e("页面加载超时");
+                        onWebViewError("页面加载超时");
+                        return;
+                    }
+                    
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
+                    
+                    Logger.t("WebView").d("页面加载完成: " + url);
+                }
+                
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    super.onReceivedError(view, errorCode, description, failingUrl);
+                    Logger.t("WebView").e("页面加载错误: " + description);
+                    onWebViewError("页面加载失败: " + description);
+                }
+
+            });
+
+        } catch (Exception e) {
+            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+            onWebViewError("播放器初始化失败");
+        }
+    }
+    //注入js脚本
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+            
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+            
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
+        }
+    }
+    
+    private void onWebViewError(String errorMessage) {
+        hideProgress();
+//        showError(errorMessage);
     }
 
     private void checkControl() {
@@ -842,6 +994,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.control.action.audio.setVisibility(mPlayers.haveTrack(C.TRACK_TYPE_AUDIO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.video.setVisibility(mPlayers.haveTrack(C.TRACK_TYPE_VIDEO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.speed.setVisibility(mPlayers.isVod() ? View.VISIBLE : View.GONE);
+
+        mBinding.control.seek.setVisibility(mPlayers.isLive() ? View.GONE : View.VISIBLE);
     }
 
     private void setMetadata() {
@@ -1156,7 +1310,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     @Override
-    protected void onDestroy() {
+    protected void onDestroy() { 
+        webPlayer.destroy();
         mPlayers.release();
         Source.get().exit();
         PlaybackService.stop();

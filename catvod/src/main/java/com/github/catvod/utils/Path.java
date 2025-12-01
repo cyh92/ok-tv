@@ -238,4 +238,8 @@ public class Path {
             return file;
         }
     }
+    //x5内核
+    public static File download() {
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+    }
 }
