@@ -682,7 +682,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void start(Result result) {
 //        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
-        
+        mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
         if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
             showWebView(result);
