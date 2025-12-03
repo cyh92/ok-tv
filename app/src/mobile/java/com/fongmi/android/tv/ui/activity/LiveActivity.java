@@ -500,12 +500,14 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     private void showProgress() {
         mBinding.widget.progress.setVisibility(View.VISIBLE);
+        mBinding.widget.traffic.setVisibility(View.VISIBLE);
         App.post(mR2, 0);
         hideError();
     }
 
     private void hideProgress() {
         mBinding.widget.progress.setVisibility(View.GONE);
+        mBinding.widget.traffic.setVisibility(View.GONE);
         App.removeCallbacks(mR2);
         Traffic.reset();
     }
@@ -980,12 +982,20 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
                 mPlayers.reset();
                 break;
             case Player.STATE_ENDED:
-                checkNext();
+                checkEnded();
                 break;
             case PlayerEvent.TRACK:
                 setMetadata();
                 setTrackVisible();
                 break;
+        }
+    }
+
+    private void checkEnded() {
+        if (mPlayers.isLive()) {
+            checkNext();
+        } else {
+            nextChannel();
         }
     }
 

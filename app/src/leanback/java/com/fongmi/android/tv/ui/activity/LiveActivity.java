@@ -945,7 +945,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
                 mPlayers.reset();
                 break;
             case Player.STATE_ENDED:
-                checkNext();
+                checkEnded();
                 break;
             case PlayerEvent.TRACK:
                 setMetadata();
@@ -954,6 +954,14 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
             case PlayerEvent.SIZE:
                 mBinding.widget.size.setText(mPlayers.getSizeText());
                 break;
+        }
+    }
+
+    private void checkEnded() {
+        if (mPlayers.isLive()) {
+            checkNext();
+        } else {
+            nextChannel();
         }
     }
 
