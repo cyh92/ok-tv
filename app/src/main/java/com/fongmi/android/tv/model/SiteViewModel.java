@@ -87,25 +87,31 @@ public class SiteViewModel extends ViewModel {
                 Spider spider = site.recent().spider();
                 boolean crash = Prefers.getBoolean("crash");
                 String homeContent = crash ? "" : spider.homeContent(true);
+                String homeVideoContent = crash ? "" : spider.homeVideoContent();
                 Prefers.put("crash", false);
                 SpiderDebug.log("home", homeContent);
-                Result result = Result.fromJson(homeContent);
-                if (!result.getList().isEmpty()) return result;
-                String homeVideoContent = spider.homeVideoContent();
                 SpiderDebug.log("homeVideo", homeVideoContent);
-                result.setList(Result.fromJson(homeVideoContent).getList());
-                return setTypes(site, result);
+                Result result = Result.fromJson(homeContent);
+                List<Vod> list = Result.fromJson(homeVideoContent).getList();
+                if (!list.isEmpty()) result.setList(list);
+                setTypes(site, result);
+                return result;
             } else if (site.getType() == 4) {
                 ArrayMap<String, String> params = new ArrayMap<>();
                 params.put("filter", "true");
                 String homeContent = call(site.fetchExt(), params);
                 SpiderDebug.log("home", homeContent);
-                return setTypes(site, Result.fromJson(homeContent));
+                Result result = Result.fromJson(homeContent);
+                setTypes(site, result);
+                return result;
             } else {
                 try (Response response = OkHttp.newCall(site.getApi(), site.getHeader()).execute()) {
                     String homeContent = response.body().string();
                     SpiderDebug.log("home", homeContent);
-                    return setTypes(site, fetchPic(site, Result.fromType(site.getType(), homeContent)));
+                    Result result = Result.fromType(site.getType(), homeContent);
+                    setTypes(site, result);
+                    fetchPic(site, result);
+                    return result;
                 }
             }
         });
@@ -143,8 +149,9 @@ public class SiteViewModel extends ViewModel {
                 String detailContent = spider.detailContent(Arrays.asList(id));
                 SpiderDebug.log("detail", detailContent);
                 Result result = Result.fromJson(detailContent);
-                if (!result.getList().isEmpty()) result.getList().get(0).setVodFlags();
-                if (!result.getList().isEmpty()) Source.get().parse(result.getList().get(0).getVodFlags());
+                if (result.getList().isEmpty()) return result;
+                result.getVod().setVodFlags();
+                Source.get().parse(result.getVod());
                 return result;
             } else if (site.isEmpty() && "push_agent".equals(key)) {
                 Vod vod = new Vod();
@@ -152,7 +159,7 @@ public class SiteViewModel extends ViewModel {
                 vod.setVodName(id);
                 vod.setVodPic(ResUtil.getString(R.string.push_image));
                 vod.setVodFlags(Flag.create(ResUtil.getString(R.string.push), id));
-                Source.get().parse(vod.getVodFlags());
+                Source.get().parse(vod);
                 return Result.vod(vod);
             } else {
                 ArrayMap<String, String> params = new ArrayMap<>();
@@ -161,8 +168,9 @@ public class SiteViewModel extends ViewModel {
                 String detailContent = call(site, params);
                 SpiderDebug.log("detail", detailContent);
                 Result result = Result.fromType(site.getType(), detailContent);
-                if (!result.getList().isEmpty()) result.getList().get(0).setVodFlags();
-                if (!result.getList().isEmpty()) Source.get().parse(result.getList().get(0).getVodFlags());
+                if (result.getList().isEmpty()) return result;
+                result.getVod().setVodFlags();
+                Source.get().parse(result.getVod());
                 return result;
             }
         });
@@ -245,7 +253,7 @@ public class SiteViewModel extends ViewModel {
     }
 
     public Result fetchPic(Site site, Result result) throws Exception {
-        if (site.getType() > 2 || result.getList().isEmpty() || !result.getList().get(0).getVodPic().isEmpty()) return result;
+        if (site.getType() > 2 || result.getList().isEmpty() || !result.getVod().getVodPic().isEmpty()) return result;
         ArrayList<String> ids = new ArrayList<>();
         boolean empty = site.getCategories().isEmpty();
         for (Vod item : result.getList()) if (empty || site.getCategories().contains(item.getTypeName())) ids.add(item.getVodId());
@@ -259,11 +267,10 @@ public class SiteViewModel extends ViewModel {
         }
     }
 
-    private Result setTypes(Site site, Result result) {
-        List<Class> types = site.getCategories().stream().flatMap(cate -> result.getTypes().stream().filter(type -> cate.equals(type.getTypeName()))).collect(Collectors.toCollection(ArrayList::new));
+    private void setTypes(Site site, Result result) {
         result.getTypes().stream().filter(type -> result.getFilters().containsKey(type.getTypeId())).forEach(type -> type.setFilters(result.getFilters().get(type.getTypeId())));
+        List<Class> types = site.getCategories().stream().flatMap(cate -> result.getTypes().stream().filter(type -> cate.equals(type.getTypeName()))).toList();
         if (!types.isEmpty()) result.setTypes(types);
-        return result;
     }
 
     private void execute(MutableLiveData<Result> result, Callable<Result> callable) {
