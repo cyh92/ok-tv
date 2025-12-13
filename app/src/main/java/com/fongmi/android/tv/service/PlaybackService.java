@@ -134,9 +134,8 @@ public class PlaybackService extends Service {
     }
 
     private boolean isHyperOS() {
-        return Build.MANUFACTURER.equalsIgnoreCase("Xiaomi") &&
-                Build.VERSION.INCREMENTAL != null &&
-                Build.VERSION.INCREMENTAL.contains("V");
+        return Build.MANUFACTURER.equalsIgnoreCase("Xiaomi");
+        // &&Build.VERSION.INCREMENTAL != null && Build.VERSION.INCREMENTAL.contains("V");
     }
 
     private int getType() {
