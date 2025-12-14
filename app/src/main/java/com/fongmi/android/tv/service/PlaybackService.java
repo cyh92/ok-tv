@@ -127,7 +127,7 @@ public class PlaybackService extends Service {
             getManager().cancel(Notify.ID);
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 ServiceCompat.startForeground(this, Notify.ID, buildNotification(), getType());
-            }, 100);
+            }, 150);
         } else {
             Notify.show(buildNotification());
         }
