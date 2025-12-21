@@ -210,7 +210,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private void setVideoView() {
              // Add WebViewPlayer to the video container
         webPlayer.setVisibility(View.GONE);
-        mBinding.video.addView(webPlayer);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
         
         mPlayers.init(mBinding.exo);
         PlaybackService.start(mPlayers);
@@ -702,7 +702,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
             webPlayer.stop();
             mBinding.exo.setVisibility(View.GONE);
             webPlayer.setVisibility(View.VISIBLE);
-            webPlayer.bringToFront();
+            // webPlayer现在在最底层，不需要bringToFront
             
             // 检查WebViewPlayer的触摸透明状态
             Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());

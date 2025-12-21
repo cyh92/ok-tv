@@ -213,7 +213,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private void setVideoView() {
         // Add WebViewPlayer to the video container
         webPlayer.setVisibility(View.GONE);
-        mBinding.video.addView(webPlayer);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
         
         Logger.t("LiveActivity").d("设置视频容器触摸监听器");
         mBinding.video.setOnTouchListener((view, event) -> {
@@ -729,8 +729,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
             webPlayer.stop();
             mBinding.exo.setVisibility(View.GONE);
             webPlayer.setVisibility(View.VISIBLE);
-            webPlayer.bringToFront();
-            
+
             // 检查WebViewPlayer的触摸透明状态
             Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
             Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
