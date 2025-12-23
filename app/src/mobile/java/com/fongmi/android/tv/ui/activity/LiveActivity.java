@@ -740,9 +740,15 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
                 public void onPageStarted() {
                     showProgress();
                 }
+                private boolean isScriptInjected = false;
                 @Override
                 public void onPageFinished(WebView webView) {
                     Logger.t("WebView").e("页面加载完成");
+
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
                     hideProgress();
                 }
                 @Override
@@ -757,6 +763,27 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
         } catch (Exception e) {
             Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+        }
+    }
+    //注入js
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream =getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
         }
     }
     private void checkControl() {

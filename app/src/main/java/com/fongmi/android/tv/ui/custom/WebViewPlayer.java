@@ -40,7 +40,6 @@ import java.io.InputStreamReader;
 public class WebViewPlayer extends FrameLayout {
 
     private static final String TAG = "WebViewPlayer";
-    private Context context;
     public WebView webView;
     private ProgressBar progressBar;
     private View touchInterceptor;
@@ -64,7 +63,6 @@ public class WebViewPlayer extends FrameLayout {
 
     public WebViewPlayer(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        this.context = context;
         init(context);
     }
     public void start(Result result) {
@@ -189,23 +187,9 @@ public class WebViewPlayer extends FrameLayout {
                     callback.onPageStarted();
                 }
             }
-
-            private boolean isScriptInjected = false;
-            private final long startTime = System.currentTimeMillis();
-            private static final long TIMEOUT_MS = 30000; // 30秒超时
             @Override
             public void onPageFinished(WebView webView, String url) {
                 super.onPageFinished(webView, url);
-                // 检查超时
-                if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
-                    Logger.t("WebView").e("页面加载超时");
-                    return;
-                }
-
-                if (!isScriptInjected) {
-                    injectPlayerScript(webView);
-                    isScriptInjected = true;
-                }
                 if (callback != null) {
                     callback.onPageFinished(webView);
                 }
@@ -228,29 +212,6 @@ public class WebViewPlayer extends FrameLayout {
 
         });
     }
-
-    private void injectPlayerScript(WebView webView) {
-        try {
-            InputStream inputStream = context.getAssets().open("js/webview_player_impl.js");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            reader.close();
-
-            webView.evaluateJavascript(sb.toString(), value -> {
-                Logger.t("WebView").d("播放器脚本注入完成");
-            });
-
-        } catch (IOException e) {
-            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
-            // 不抛出异常，允许页面继续加载
-        }
-    }
-
-
     private void initProgressBar(Context context) {
         progressBar = new ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, dpToPx(2)));
