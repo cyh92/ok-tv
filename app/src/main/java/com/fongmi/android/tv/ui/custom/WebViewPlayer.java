@@ -3,6 +3,8 @@ package com.fongmi.android.tv.ui.custom;
 import static com.tencent.smtt.sdk.WebSettings.*;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -21,6 +23,7 @@ import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
 import com.fongmi.android.tv.bean.Result;
+import com.tencent.smtt.export.external.interfaces.IX5WebChromeClient;
 import com.tencent.smtt.sdk.WebChromeClient;
 import com.tencent.smtt.sdk.WebSettings;
 import com.tencent.smtt.sdk.WebView;
@@ -29,9 +32,15 @@ import com.tencent.smtt.sdk.WebViewClient;
 import com.fongmi.android.tv.bean.Channel;
 import com.orhanobut.logger.Logger;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
 public class WebViewPlayer extends FrameLayout {
 
     private static final String TAG = "WebViewPlayer";
+    private Context context;
     public WebView webView;
     private ProgressBar progressBar;
     private View touchInterceptor;
@@ -40,9 +49,8 @@ public class WebViewPlayer extends FrameLayout {
     private boolean isVideoDetected = false;
     
     public interface VideoPlayerCallback {
-        void onVideoFound(int videoCount);
-        void onVideoPlaying();
-        void onVideoError(String error);
+        void onPageStarted();
+        void onPageFinished(WebView webView);
         void onPageLoadProgress(int progress);
     }
 
@@ -56,6 +64,7 @@ public class WebViewPlayer extends FrameLayout {
 
     public WebViewPlayer(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        this.context = context;
         init(context);
     }
     public void start(Result result) {
@@ -65,7 +74,12 @@ public class WebViewPlayer extends FrameLayout {
         Logger.t(TAG).d("触摸透明状态: " + isTouchTransparent());
         
         webView.loadUrl(result.getUrl().v(), result.getHeader());
-        
+        // 添加显示动画
+        webView.setAlpha(0f);
+        webView.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start();
         // 注入JavaScript禁用用户交互
         if (!isUserInteractionEnabled) {
             injectDisableInteractionScript();
@@ -168,7 +182,33 @@ public class WebViewPlayer extends FrameLayout {
     }
 
     private void setDefaultWebClients() {
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient(){
+            @Override
+            public void onPageStarted(WebView webView, String url, Bitmap favicon) {
+                super.onPageStarted(webView, url, favicon);
+                webView.setBackgroundColor(Color.BLACK); // 立即设置黑色背景
+                callback.onPageStarted();
+            }
+
+            private boolean isScriptInjected = false;
+            private final long startTime = System.currentTimeMillis();
+            private static final long TIMEOUT_MS = 30000; // 30秒超时
+            @Override
+            public void onPageFinished(WebView webView, String url) {
+                super.onPageFinished(webView, url);
+                // 检查超时
+                if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
+                    Logger.t("WebView").e("页面加载超时");
+                    return;
+                }
+
+                if (!isScriptInjected) {
+                    injectPlayerScript(webView);
+                    isScriptInjected = true;
+                }
+                callback.onPageFinished(webView);
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
@@ -183,29 +223,31 @@ public class WebViewPlayer extends FrameLayout {
                 
                 Logger.t(TAG).d("Page load progress: " + newProgress + "%");
             }
-            
-            @Override
-            public boolean onConsoleMessage(com.tencent.smtt.export.external.interfaces.ConsoleMessage consoleMessage) {
-                String message = consoleMessage.message();
-                Logger.t(TAG + "-Console").d(message);
-                
-                // 检测视频相关消息
-                if (message.contains("发现") && message.contains("视频元素")) {
-                    isVideoDetected = true;
-                    if (callback != null) {
-                        try {
-                            int videoCount = Integer.parseInt(message.replaceAll("\\D+", ""));
-                            callback.onVideoFound(videoCount);
-                        } catch (NumberFormatException e) {
-                            callback.onVideoFound(1);
-                        }
-                    }
-                }
-                
-                return super.onConsoleMessage(consoleMessage);
-            }
+
         });
     }
+
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream = context.getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
+        }
+    }
+
 
     private void initProgressBar(Context context) {
         progressBar = new ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
@@ -267,18 +309,6 @@ public class WebViewPlayer extends FrameLayout {
         }
         return super.onKeyDown(keyCode, event);
     }
-    public void setWebViewClient(WebViewClient client) {
-        if (webView != null) {
-            webView.setWebViewClient(client);
-        }
-    }
-
-    public void setWebChromeClient(WebChromeClient client) {
-        if (webView != null) {
-            webView.setWebChromeClient(client);
-        }
-    }
-
     public void setUserInteractionEnabled(boolean enabled) {
         isUserInteractionEnabled = enabled;
         // 不再需要touchInterceptor，直接通过WebView设置处理

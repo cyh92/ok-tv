@@ -740,105 +740,28 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
             // 设置回调监听
             webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
                 @Override
-                public void onVideoFound(int videoCount) {
-                    Logger.t("WebView").d("检测到 " + videoCount + " 个视频元素");
+                public void onPageStarted() {
+                    showProgress();
+                }
+                @Override
+                public void onPageFinished(WebView webView) {
+                    Logger.t("WebView").e("页面加载完成");
                     hideProgress();
                 }
-                
-                @Override
-                public void onVideoPlaying() {
-                    Logger.t("WebView").d("视频开始播放");
-                    hideProgress();
-                }
-                
-                @Override
-                public void onVideoError(String error) {
-                    Logger.t("WebView").e("视频播放错误: " + error);
-                    onWebViewError(error);
-                }
-                
                 @Override
                 public void onPageLoadProgress(int progress) {
-                    if (progress < 100) {
-                        showProgress();
+                    if (progress >99) {
+                        hideProgress();
                     }
                 }
             });
             
             webPlayer.start(result);
-            
-            // 添加显示动画
-            webPlayer.setAlpha(0f);
-            webPlayer.animate()
-                    .alpha(1f)
-                    .setDuration(300)
-                    .start();
-            
-            webPlayer.setWebViewClient(new WebViewClient(){
-                private boolean isScriptInjected = false;
-                private final long startTime = System.currentTimeMillis();
-                private static final long TIMEOUT_MS = 30000; // 30秒超时
-
-                @Override
-                public void onPageFinished(WebView webView, String url) {
-                    super.onPageFinished(webView, url);
-                    
-                    // 检查超时
-                    if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
-                        Logger.t("WebView").e("页面加载超时");
-                        onWebViewError("页面加载超时");
-                        return;
-                    }
-                    
-                    if (!isScriptInjected) {
-                        injectPlayerScript(webView);
-                        isScriptInjected = true;
-                    }
-                    
-                    Logger.t("WebView").d("页面加载完成: " + url);
-                }
-                
-                @Override
-                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                    super.onReceivedError(view, errorCode, description, failingUrl);
-                    Logger.t("WebView").e("页面加载错误: " + description);
-                    onWebViewError("页面加载失败: " + description);
-                }
-
-            });
 
         } catch (Exception e) {
             Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
-            onWebViewError("播放器初始化失败");
         }
     }
-    //注入js脚本
-    private void injectPlayerScript(WebView webView) {
-        try {
-            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            reader.close();
-            
-            webView.evaluateJavascript(sb.toString(), value -> {
-                Logger.t("WebView").d("播放器脚本注入完成");
-            });
-            
-        } catch (IOException e) {
-            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
-            // 不抛出异常，允许页面继续加载
-        }
-    }
-    
-    private void onWebViewError(String errorMessage) {
-        hideProgress();
-//        showError(errorMessage);
-    }
-
     private void checkControl() {
         if (isVisible(mBinding.control.getRoot())) showControl();
     }
