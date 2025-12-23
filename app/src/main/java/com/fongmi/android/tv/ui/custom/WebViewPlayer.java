@@ -185,7 +185,9 @@ public class WebViewPlayer extends FrameLayout {
             public void onPageStarted(WebView webView, String url, Bitmap favicon) {
                 super.onPageStarted(webView, url, favicon);
                 webView.setBackgroundColor(Color.BLACK); // 立即设置黑色背景
-                callback.onPageStarted();
+                if (callback != null) {
+                    callback.onPageStarted();
+                }
             }
 
             private boolean isScriptInjected = false;
@@ -204,7 +206,9 @@ public class WebViewPlayer extends FrameLayout {
                     injectPlayerScript(webView);
                     isScriptInjected = true;
                 }
-                callback.onPageFinished(webView);
+                if (callback != null) {
+                    callback.onPageFinished(webView);
+                }
             }
         });
         webView.setWebChromeClient(new WebChromeClient() {
