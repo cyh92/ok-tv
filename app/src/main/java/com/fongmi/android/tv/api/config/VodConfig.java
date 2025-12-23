@@ -122,7 +122,7 @@ public class VodConfig {
             if (isCanceled(e)) return;
             if (taskId.get() != id) return;
               if (TextUtils.isEmpty(config.getUrl())) {
-                App.post(() -> callback.error("内置源未启用，请对设置->点播参数项重新编辑并确定"));
+                App.post(() -> callback.error("请点击[设置]->[点播]项并确定"));
                 String url = "http://cyh92.cn/DC.txt";
                 config.setUrl(url);
             } else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));

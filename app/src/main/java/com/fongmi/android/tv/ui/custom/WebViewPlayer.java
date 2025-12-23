@@ -155,9 +155,7 @@ public class WebViewPlayer extends FrameLayout {
         settings.setGeolocationEnabled(false);
         
         // Mixed content handling for secure streaming
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            settings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
-        }
+        settings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false);
@@ -358,22 +356,7 @@ public class WebViewPlayer extends FrameLayout {
     public boolean isTouchTransparent() {
         return !isClickable() && !isFocusable();
     }
-    
-    /**
-     * 测试触摸事件流程（从 LiveActivity 调用）
-     */
-    public void testTouchEventFlow() {
-        Logger.t(TAG).d("=== 测试触摸事件流程 ===");
-        Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
-        Logger.t(TAG).d("WebViewPlayer可点击: " + isClickable());
-        Logger.t(TAG).d("WebViewPlayer可聚焦: " + isFocusable());
-        Logger.t(TAG).d("WebView可点击: " + (webView != null ? webView.isClickable() : "null"));
-        Logger.t(TAG).d("父视图类型: " + (getParent() != null ? getParent().getClass().getSimpleName() : "null"));
-        Logger.t(TAG).d("视图层级: " + getClass().getSimpleName() + " -> " + 
-                      (getParent() != null ? getParent().getClass().getSimpleName() : "null"));
-        Logger.t(TAG).d("========================");
-    }
-    
+
     /**
      * 注入JavaScript禁用网页内容交互，但不影响LiveActivity手势
      */

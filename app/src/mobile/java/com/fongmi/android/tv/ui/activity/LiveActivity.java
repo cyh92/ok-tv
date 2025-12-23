@@ -734,9 +734,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
             Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
             Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
             
-            // 测试触摸事件流程
-            webPlayer.testTouchEventFlow();
-            
             // 设置回调监听
             webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
                 @Override
