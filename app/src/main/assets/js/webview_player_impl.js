@@ -2,7 +2,8 @@ const ___startTime = Date.now();
 const MAX_DETECTION_TIME = 30000; // 30秒最大检测时间
 const DETECTION_INTERVAL = 200; // 200ms检测间隔
 let videoDetectionAttempts = 0;
-let maxDetectionAttempts = MAX_DETECTION_TIME / DETECTION_INTERVAL;
+const maxDetectionAttempts = MAX_DETECTION_TIME / DETECTION_INTERVAL;
+let enableVideoTimer = null;
 
 // 增强的视频检测函数
 function findAllVideos() {
@@ -103,24 +104,54 @@ function removeVideoPlayerControl() {
 }
 
 function removeAllDivElements() {
-
     [...document.body.children].forEach((element) => {
-        const tagName = element.tagName.toLowerCase()
-        if (tagName != 'script' && tagName != 'video'){
-            // element.remove();
+        const tagName = element.tagName.toLowerCase();
+        if (tagName != 'script' && tagName != 'video' && tagName != 'head'){
             element.style.display = 'none';
         }
-    })
+    });
 }
 
 function addVideoPlayerMask(video) {
     clearInterval(my_pollingIntervalId);
+    if (enableVideoTimer) {
+        clearInterval(enableVideoTimer);
+        enableVideoTimer = null;
+    }
+
+    // 将video移到body下
     document.body.appendChild(video);
+
+    // 隐藏其他元素
     removeAllDivElements();
-    video.style = 'width: 100%; height: 100%;object-fit: contain;'
-    video.autoplay = true
-    document.body.style = 'width: 100vw; height: 100vh; margin: 0; min-width: 0; background: #000; padding: 0;'
-    Android.changeVideoResolution(1920, 1080);
+
+    // 设置video样式
+    video.style.width = '100%';
+    video.style.height = '100%';
+    video.style.objectFit = 'contain';
+    video.style.position = 'absolute';
+    video.style.top = '0';
+    video.style.left = '0';
+    video.style.zIndex = '9999';
+    video.autoplay = true;
+
+    // 设置body样式
+    document.body.style.width = '100vw';
+    document.body.style.height = '100vh';
+    document.body.style.margin = '0';
+    document.body.style.minWidth = '0';
+    document.body.style.background = '#000';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+
+    // 设置html样式
+    document.documentElement.style.width = '100vw';
+    document.documentElement.style.height = '100vh';
+    document.documentElement.style.overflow = 'hidden';
+
+    if (typeof Android !== 'undefined' && Android.changeVideoResolution) {
+        Android.changeVideoResolution(1920, 1080);
+    }
 }
 
 function enableVideo(video) {
@@ -128,23 +159,29 @@ function enableVideo(video) {
         video.muted = false;
         video.autoplay = true;
         video.volume = 1;
-    }else{
-        clearInterval(enableVideo);
+        return true;
     }
+    return false;
 }
 
 function cleanAllStyle() {
+    // 移除所有样式表和style标签
     const styles = document.querySelectorAll('style,link[rel="stylesheet"]');
     styles.forEach(style => {
         style.remove();
     });
+
+    // 清理除video和script外的所有元素的内联样式
     const allElements = document.querySelectorAll('*');
     allElements.forEach(element => {
-        element.removeAttribute('style');
+        const tagName = element.tagName.toLowerCase();
+        if (tagName !== 'video' && tagName !== 'script') {
+            element.removeAttribute('style');
+        }
     });
 }
 
-function __initializetMain() {
+function __initializeMain() {
     videoDetectionAttempts++;
 
     if (videoDetectionAttempts > maxDetectionAttempts) {
@@ -193,7 +230,14 @@ function __initializetMain() {
                         }
                     }, { once: true });
 
-                    setInterval(enableVideo, 100, video);
+                    if (!enableVideoTimer) {
+                        enableVideoTimer = setInterval(function() {
+                            if (!enableVideo(video)) {
+                                clearInterval(enableVideoTimer);
+                                enableVideoTimer = null;
+                            }
+                        }, 100);
+                    }
                     break; // 找到第一个可用视频就停止
                 }
             }
@@ -210,5 +254,4 @@ function __initializetMain() {
         }
     }
 }
-// cleanAllStyle();
-const my_pollingIntervalId = setInterval(__initializetMain, DETECTION_INTERVAL);
+const my_pollingIntervalId = setInterval(__initializeMain, DETECTION_INTERVAL);
