@@ -282,7 +282,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setWidth(Live live) {
-        int padding = ResUtil.dp2px(48);
+        int padding = ResUtil.dp2px(52);
         if (live.getWidth() == 0) for (Group item : live.getGroups()) live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
         int width = live.getWidth() == 0 ? 0 : Math.min(live.getWidth() + padding, ResUtil.getScreenWidth() / 4);
         setWidth(mBinding.group, width);
@@ -290,7 +290,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private Group setWidth(Group group) {
         int logo = ResUtil.dp2px(60);
-        int padding = ResUtil.dp2px(60);
+        int padding = ResUtil.dp2px(64);
         if (group.isKeep()) group.setWidth(0);
         if (group.getWidth() == 0) for (Channel item : group.getChannel()) group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
         int width = group.getWidth() == 0 ? 0 : Math.min(group.getWidth() + padding, ResUtil.getScreenWidth() / 2);
@@ -299,9 +299,9 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setWidth(Epg epg) {
-        int padding = ResUtil.dp2px(48);
+        int padding = ResUtil.dp2px(52);
         if (epg.getList().isEmpty()) return;
-        int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 16);
+        int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 14);
         if (epg.getWidth() == 0) for (EpgData item : epg.getList()) epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
         int width = epg.getWidth() == 0 ? 0 : Math.min(Math.max(epg.getWidth(), minWidth) + padding, ResUtil.getScreenWidth() / 2);
         setWidth(mBinding.epgData, width);
@@ -445,7 +445,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void showUI() {
-        if (isVisible(mBinding.recycler)) return;
+        if (isVisible(mBinding.recycler) || mGroupAdapter.size() == 0) return;
         mBinding.recycler.setVisibility(View.VISIBLE);
         setPosition();
         setUITimer();
@@ -472,13 +472,13 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void showProgress() {
-        mBinding.widget.progress.setVisibility(View.VISIBLE);
+        mBinding.progress.getRoot().setVisibility(View.VISIBLE);
         App.post(mR2, 0);
         hideError();
     }
 
     private void hideProgress() {
-        mBinding.widget.progress.setVisibility(View.GONE);
+        mBinding.progress.getRoot().setVisibility(View.GONE);
         App.removeCallbacks(mR2);
         Traffic.reset();
     }
@@ -525,7 +525,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setTraffic() {
-        Traffic.setSpeed(mBinding.widget.traffic);
+        Traffic.setSpeed(mBinding.progress.traffic);
         App.post(mR2, 1000);
     }
 
@@ -826,9 +826,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void resetAdapter() {
-        mBinding.channel.getLayoutParams().width = 0;
-        mBinding.epgData.getLayoutParams().width = 0;
-        mBinding.group.getLayoutParams().width = 0;
+        mBinding.control.line.setVisibility(View.GONE);
+        mBinding.widget.title.setText("");
         mEpgDataAdapter.clear();
         mChannelAdapter.clear();
         mGroupAdapter.clear();
@@ -876,6 +875,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         if (item.isActivated()) item.getGroups().clear();
         LiveConfig.get().setHome(item);
         mPlayers.reset();
+        mPlayers.clear();
         mPlayers.stop();
         resetAdapter();
         hideControl();
@@ -904,8 +904,10 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
-        if (ActionEvent.PLAY.equals(event.getAction()) || ActionEvent.PAUSE.equals(event.getAction())) {
-            checkPlay();
+        if (ActionEvent.PLAY.equals(event.getAction())) {
+            onPlay();
+        } else if (ActionEvent.PAUSE.equals(event.getAction())) {
+            onPaused();
         } else if (ActionEvent.NEXT.equals(event.getAction())) {
             nextChannel();
         } else if (ActionEvent.PREV.equals(event.getAction())) {
@@ -945,7 +947,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
                 mPlayers.reset();
                 break;
             case Player.STATE_ENDED:
-                checkNext();
+                checkEnded();
                 break;
             case PlayerEvent.TRACK:
                 setMetadata();
@@ -954,6 +956,14 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
             case PlayerEvent.SIZE:
                 mBinding.widget.size.setText(mPlayers.getSizeText());
                 break;
+        }
+    }
+
+    private void checkEnded() {
+        if (mPlayers.isLive()) {
+            checkNext();
+        } else {
+            nextChannel();
         }
     }
 
@@ -976,11 +986,6 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onErrorEvent(ErrorEvent event) {
         if (!event.getTag().equals(tag)) return;
-        if (mPlayers.retried()) onError(event);
-        else fetch();
-    }
-
-    private void onError(ErrorEvent event) {
         Track.delete(mPlayers.getUrl());
         showError(event.getMsg());
         mPlayers.resetTrack();
@@ -1070,8 +1075,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void seek(long time) {
-        mKeyDown.resetTime();
         mPlayers.seek(time);
+        mKeyDown.reset();
         showProgress();
         hideCenter();
     }
