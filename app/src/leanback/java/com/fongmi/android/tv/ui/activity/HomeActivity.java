@@ -29,6 +29,7 @@ import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.bean.Cache;
+import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Filter;
 import com.fongmi.android.tv.bean.Func;
@@ -210,17 +211,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         home.setTypeName(ResUtil.getString(R.string.vod_home));
         mTabAdapter.add(home);
     }
-
-    private List<Class> getTypes(Result result) {
-        List<Class> items = new ArrayList<>();
-        for (String cate : getHome().getCategories())
-            for (Class item : result.getTypes())
-                if (cate.equals(item.getTypeName())) items.add(item);
-        return items;
-    }
     public void setTypes() {
-        mResult.setTypes(getTypes(mResult));
-        for (Map.Entry<String, List<Filter>> entry : mResult.getFilters().entrySet()) Prefers.put("filter_" + getHome().getKey() + "_" + entry.getKey(), App.gson().toJson(entry.getValue()));
+        for (Map.Entry<String, List<Filter>> entry : mResult.getFilters().entrySet())
+            Prefers.put("filter_" + getHome().getKey() + "_" + entry.getKey(), App.gson().toJson(entry.getValue()));
         for (Class item : mResult.getTypes()) item.setFilters(getFilter(item.getTypeId()));
         if (mTabAdapter.size() > 1) mTabAdapter.removeItems(1, mTabAdapter.size() - 1);
         if (mResult.getTypes().size() > 0) mTabAdapter.addAll(1, mResult.getTypes());
