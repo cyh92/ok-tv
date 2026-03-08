@@ -73,8 +73,7 @@ abstract class BaseConfig {
             e.printStackTrace();
             if (isCanceled(e)) return;
             if (taskId.get() != id) return;
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
-            else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
+            handleEmptyUrl(config, callback);
         } finally {
             if (taskId.get() == id) postEvent();
         }
@@ -82,5 +81,9 @@ abstract class BaseConfig {
 
     protected boolean isCanceled(Throwable e) {
         return "Canceled".equals(e.getMessage()) || e instanceof InterruptedException || e instanceof InterruptedIOException || e.getCause() instanceof InterruptedIOException;
+    }
+     protected void handleEmptyUrl(Config config, Callback callback) {
+        if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+        else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, null)));
     }
 }
