@@ -1,9 +1,6 @@
 package com.fongmi.android.tv.receiver;
 
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -15,9 +12,7 @@ import androidx.annotation.NonNull;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.api.config.LiveConfig;
-import com.fongmi.android.tv.service.BootJobService;
 import com.fongmi.android.tv.service.BootStartService;
-import com.fongmi.android.tv.ui.activity.HomeActivity;
 
 public class BootReceiver extends BroadcastReceiver {
 
