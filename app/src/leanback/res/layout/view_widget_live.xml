@@ -134,7 +134,7 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <ImageView
+        <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/logo"
             android:layout_width="270dp"
             android:layout_height="match_parent"
@@ -147,7 +147,7 @@
             android:layout_weight="1"
             app:srcCompat="@drawable/ic_img_empty" />
 
-        <LinearLayout
+        <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -155,7 +155,7 @@
             android:paddingTop="5dp"
             android:paddingBottom="5dp">
 
-            <LinearLayout
+            <androidx.appcompat.widget.LinearLayoutCompat
                 android:id="@+id/ll_line1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -190,7 +190,7 @@
                     android:textColor="@color/white"
                     android:textSize="25dp" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/clock"
                     android:layout_width="150dp"
                     android:layout_height="wrap_content"
@@ -205,9 +205,9 @@
                     android:textStyle="normal"
                     android:visibility="visible" />
 
-            </LinearLayout>
+            </androidx.appcompat.widget.LinearLayoutCompat>
 
-            <LinearLayout
+            <androidx.appcompat.widget.LinearLayoutCompat
                 android:id="@+id/ll_line2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -216,7 +216,7 @@
                 android:paddingBottom="1dp">
 
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/number"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -259,7 +259,7 @@
                     android:textColor="@color/white"
                     android:textSize="15sp" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/size"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -277,9 +277,9 @@
                     android:shadowColor="@color/white"
                     android:text="1920 x 1080"
                     android:textColor="@color/white"
-                    android:textSize="15dp"/>
+                    android:textSize="15dp" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/line"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -296,9 +296,9 @@
                     android:text="来源 1"
                     android:textColor="@color/white"
                     android:textSize="15dp" />
-            </LinearLayout>
+            </androidx.appcompat.widget.LinearLayoutCompat>
 
-            <LinearLayout
+            <androidx.appcompat.widget.LinearLayoutCompat
                 android:id="@+id/ll_line3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -322,9 +322,9 @@
                     android:textColor="@color/white"
                     android:textSize="15sp" />
 
-            </LinearLayout>
+            </androidx.appcompat.widget.LinearLayoutCompat>
 
-        </LinearLayout>
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 </FrameLayout>

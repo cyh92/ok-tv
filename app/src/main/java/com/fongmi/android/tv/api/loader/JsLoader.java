@@ -2,6 +2,7 @@ package com.fongmi.android.tv.api.loader;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.quickjs.crawler.Loader;
+import com.fongmi.quickjs.utils.Module;
 import com.github.catvod.crawler.Spider;
 import com.github.catvod.crawler.SpiderNull;
 
@@ -12,7 +13,7 @@ public class JsLoader {
 
     private final ConcurrentHashMap<String, Spider> spiders;
     private final Loader loader;
-    private String recent;
+    private volatile String recent;
 
     public JsLoader() {
         spiders = new ConcurrentHashMap<>();
@@ -21,7 +22,9 @@ public class JsLoader {
 
     public void clear() {
         spiders.values().forEach(Spider::destroy);
+        Module.get().clear();
         spiders.clear();
+        recent = null;
     }
 
     public void setRecent(String recent) {

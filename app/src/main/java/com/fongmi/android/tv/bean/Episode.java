@@ -11,6 +11,8 @@ import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.utils.Trans;
 import com.google.gson.annotations.SerializedName;
 
+import java.util.Objects;
+
 public class Episode implements Parcelable, Diffable<Episode> {
 
     @SerializedName("name")
@@ -95,9 +97,14 @@ public class Episode implements Parcelable, Diffable<Episode> {
     public int getScore(String name, int number) {
         if (getName().equalsIgnoreCase(name)) return 100;
         if (number != -1 && getNumber() == number) return 80;
-        if (number == -1 && getName().toLowerCase().contains(name.toLowerCase())) return 70;
-        if (number == -1 && name.toLowerCase().contains(getName().toLowerCase())) return 60;
+        if (number == -1 && name.length() >= 2 && getName().toLowerCase().contains(name.toLowerCase())) return 70;
+        if (number == -1 && getName().length() >= 2 && name.toLowerCase().contains(getName().toLowerCase())) return 60;
         return 0;
+    }
+
+    public boolean matchesName(Episode other) {
+        if (other == null) return false;
+        return getName().equalsIgnoreCase(other.getName());
     }
 
     public Episode trans() {
@@ -111,12 +118,12 @@ public class Episode implements Parcelable, Diffable<Episode> {
     public boolean equals(@Nullable Object obj) {
         if (this == obj) return true;
         if (!(obj instanceof Episode it)) return false;
-        return getName().equals(it.getName());
+        return Objects.equals(getName(), it.getName()) && Objects.equals(getUrl(), it.getUrl());
     }
 
     @Override
     public int hashCode() {
-        return getName().hashCode();
+        return Objects.hash(getName(), getUrl());
     }
 
     @Override

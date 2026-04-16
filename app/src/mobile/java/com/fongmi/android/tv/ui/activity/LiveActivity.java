@@ -213,7 +213,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private void setVideoView() {
         // Add WebViewPlayer to the video container
         webPlayer.setVisibility(View.GONE);
-        mBinding.video.addView(webPlayer);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
         
         Logger.t("LiveActivity").d("设置视频容器触摸监听器");
         mBinding.video.setOnTouchListener((view, event) -> {
@@ -250,10 +250,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(LiveViewModel.class);
-        mViewModel.url.observeForever(mObserveUrl);
-        mViewModel.xml.observe(this, this::setEpg);
-        mViewModel.epg.observeForever(mObserveEpg);
-        mViewModel.live.observe(this, live -> {
+        mViewModel.url().observeForever(mObserveUrl);
+        mViewModel.xml().observe(this, this::setEpg);
+        mViewModel.epg().observeForever(mObserveEpg);
+        mViewModel.live().observe(this, live -> {
             mViewModel.getXml(live);
             setGroup(live);
             setWidth(live);
@@ -292,7 +292,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         List<Group> items = new ArrayList<>();
         for (Group group : live.getGroups()) (group.isHidden() ? mHides : items).add(group);
         mGroupAdapter.addAll(items);
-        setPosition(LiveConfig.get().find(items));
+        setPosition(LiveConfig.get().findKeepPosition(items));
     }
 
     private void setWidth(Live live) {
@@ -485,8 +485,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void showEpg(Channel item) {
-        if (mChannel == null || mChannel.getData().getList().isEmpty() || mEpgDataAdapter.getItemCount() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup)) return;
-        scrollToPosition(mBinding.epgData, item.getData().getSelected());
+        if (mChannel == null || mChannel.getData(mViewModel.getZoneId()).getList().isEmpty() || mEpgDataAdapter.getItemCount() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup)) return;
+        scrollToPosition(mBinding.epgData, item.getData(mViewModel.getZoneId()).getSelected());
         mBinding.epgData.setVisibility(View.VISIBLE);
         mBinding.channel.setVisibility(View.GONE);
         mBinding.group.setVisibility(View.GONE);
@@ -605,7 +605,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     @Override
     public void onItemClick(Channel item) {
-        if (!item.getData().getList().isEmpty() && item.isSelected() && mChannel != null && mChannel.equals(item) && mChannel.getGroup().equals(mGroup)) {
+        if (!item.getData(mViewModel.getZoneId()).getList().isEmpty() && item.isSelected() && mChannel != null && mChannel.equals(item) && mChannel.getGroup().equals(mGroup)) {
             showEpg(item);
         } else if (mGroup != null) {
             mGroup.setPosition(mChannelAdapter.setSelected(item.group(mGroup)));
@@ -632,7 +632,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     public void onItemClick(EpgData item) {
         if (item.isSelected()) {
             fetch(item);
-        } else if (mChannel.hasCatchup()) {
+        } else if (mChannel.hasCatchup() || mChannel.isRtsp()) {
             mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getShow(), item.getTitle()));
             Notify.show(getString(R.string.play_ready, item.getTitle()));
             mEpgDataAdapter.setSelected(item);
@@ -660,10 +660,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.widget.name.setMaxEms(48);
         mChannel.loadLogo(mBinding.widget.logo);
         mBinding.control.title.setSelected(true);
+        mBinding.widget.line.setText(mChannel.getLine());
         mBinding.widget.name.setText(mChannel.getShow());
         mBinding.control.title.setText(mChannel.getShow());
         mBinding.widget.namePip.setText(mChannel.getShow());
-        mBinding.widget.line.setText(mChannel.getLineText());
         mBinding.widget.number.setText(mChannel.getNumber());
         mBinding.widget.numberPip.setText(mChannel.getNumber());
         mBinding.widget.line.setVisibility(mChannel.getLineVisible());
@@ -671,23 +671,20 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.control.action.line.setVisibility(mBinding.widget.line.getVisibility());
     }
 
-    private void setEpg() {
-        EpgData data = mChannel.getData().getEpgData();
+    private void setEpg(Epg epg) {
+        if (mChannel == null || !mChannel.getTvgId().equals(epg.getKey())) return;
+        EpgData data = epg.getEpgData();
         boolean hasTitle = !data.getTitle().isEmpty();
-        mEpgDataAdapter.addAll(mChannel.getData().getList());
+        mEpgDataAdapter.addAll(epg.getList());
         if (hasTitle) mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getShow(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
-        setWidth(mChannel.getData());
+        setWidth(epg);
         setMetadata();
     }
 
     private void setEpg(boolean success) {
         if (mChannel != null && success) mViewModel.getEpg(mChannel);
-    }
-
-    private void setEpg(Epg epg) {
-        if (mChannel != null && mChannel.getTvgId().equals(epg.getKey())) setEpg();
     }
 
     private void fetch(EpgData item) {
@@ -709,7 +706,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     private void start(Result result) {
 //        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
-        
+        mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
         if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
             showWebView(result);
@@ -729,94 +726,46 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
             webPlayer.stop();
             mBinding.exo.setVisibility(View.GONE);
             webPlayer.setVisibility(View.VISIBLE);
-            webPlayer.bringToFront();
-            
+
             // 检查WebViewPlayer的触摸透明状态
             Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
             Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
             
-            // 测试触摸事件流程
-            webPlayer.testTouchEventFlow();
-            
             // 设置回调监听
             webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
                 @Override
-                public void onVideoFound(int videoCount) {
-                    Logger.t("WebView").d("检测到 " + videoCount + " 个视频元素");
+                public void onPageStarted() {
+                    showProgress();
+                }
+                private boolean isScriptInjected = false;
+                @Override
+                public void onPageFinished(WebView webView) {
+                    Logger.t("WebView").e("页面加载完成");
+
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
                     hideProgress();
                 }
-                
-                @Override
-                public void onVideoPlaying() {
-                    Logger.t("WebView").d("视频开始播放");
-                    hideProgress();
-                }
-                
-                @Override
-                public void onVideoError(String error) {
-                    Logger.t("WebView").e("视频播放错误: " + error);
-                    onWebViewError(error);
-                }
-                
                 @Override
                 public void onPageLoadProgress(int progress) {
-                    if (progress < 100) {
-                        showProgress();
+                    if (progress >99) {
+                        hideProgress();
                     }
                 }
             });
             
             webPlayer.start(result);
-            
-            // 添加显示动画
-            webPlayer.setAlpha(0f);
-            webPlayer.animate()
-                    .alpha(1f)
-                    .setDuration(300)
-                    .start();
-            
-            webPlayer.setWebViewClient(new WebViewClient(){
-                private boolean isScriptInjected = false;
-                private final long startTime = System.currentTimeMillis();
-                private static final long TIMEOUT_MS = 30000; // 30秒超时
-
-                @Override
-                public void onPageFinished(WebView webView, String url) {
-                    super.onPageFinished(webView, url);
-                    
-                    // 检查超时
-                    if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
-                        Logger.t("WebView").e("页面加载超时");
-                        onWebViewError("页面加载超时");
-                        return;
-                    }
-                    
-                    if (!isScriptInjected) {
-                        injectPlayerScript(webView);
-                        isScriptInjected = true;
-                    }
-                    
-                    Logger.t("WebView").d("页面加载完成: " + url);
-                }
-                
-                @Override
-                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                    super.onReceivedError(view, errorCode, description, failingUrl);
-                    Logger.t("WebView").e("页面加载错误: " + description);
-                    onWebViewError("页面加载失败: " + description);
-                }
-
-            });
 
         } catch (Exception e) {
             Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
-            onWebViewError("播放器初始化失败");
         }
     }
-    //注入js脚本
+    //注入js
     private void injectPlayerScript(WebView webView) {
         try {
-            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
+            InputStream inputStream =getAssets().open("js/webview_player_impl.js");
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             StringBuilder sb = new StringBuilder();
             String line;
@@ -824,22 +773,16 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
                 sb.append(line).append("\n");
             }
             reader.close();
-            
+
             webView.evaluateJavascript(sb.toString(), value -> {
                 Logger.t("WebView").d("播放器脚本注入完成");
             });
-            
+
         } catch (IOException e) {
             Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
             // 不抛出异常，允许页面继续加载
         }
     }
-    
-    private void onWebViewError(String errorMessage) {
-        hideProgress();
-//        showError(errorMessage);
-    }
-
     private void checkControl() {
         if (isVisible(mBinding.control.getRoot())) showControl();
     }
@@ -885,7 +828,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
             @Override
             public void success() {
-                RefreshEvent.config();
                 setLive(getHome());
             }
 
@@ -935,18 +877,18 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
-        if (ActionEvent.PLAY.equals(event.getAction())) {
+        if (ActionEvent.PLAY.equals(event.action())) {
             onPlay();
-        } else if (ActionEvent.PAUSE.equals(event.getAction())) {
+        } else if (ActionEvent.PAUSE.equals(event.action())) {
             onPaused();
-        } else if (ActionEvent.NEXT.equals(event.getAction())) {
+        } else if (ActionEvent.NEXT.equals(event.action())) {
             nextChannel();
-        } else if (ActionEvent.PREV.equals(event.getAction())) {
+        } else if (ActionEvent.PREV.equals(event.action())) {
             prevChannel();
-        } else if (ActionEvent.AUDIO.equals(event.getAction())) {
+        } else if (ActionEvent.AUDIO.equals(event.action())) {
             moveTaskToBack(true);
             setAudioOnly(true);
-        } else if (ActionEvent.STOP.equals(event.getAction())) {
+        } else if (ActionEvent.STOP.equals(event.action())) {
             finish();
         }
     }
@@ -965,8 +907,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onPlayerEvent(PlayerEvent event) {
-        if (!event.getTag().equals(tag)) return;
-        switch (event.getState()) {
+        if (!event.tag().equals(tag)) return;
+        switch (event.state()) {
             case PlayerEvent.PREPARE:
                 setDecode();
                 break;
@@ -1073,10 +1015,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void checkNext() {
-        int current = mChannel.getData().getInRange();
-        int position = mChannel.getData().getSelected() + 1;
+        int current = mChannel.getData(mViewModel.getZoneId()).getInRange();
+        int position = mChannel.getData(mViewModel.getZoneId()).getSelected() + 1;
         boolean hasNext = position <= current && position > 0;
-        if (hasNext) onItemClick(mChannel.getData().getList().get(position));
+        if (hasNext) onItemClick(mChannel.getData(mViewModel.getZoneId()).getList().get(position));
         else fetch();
     }
 
@@ -1288,7 +1230,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     @Override
     protected void onPause() {
         super.onPause();
-        if (isRedirect()) onPaused();
+        if (isRedirect()) mPlayers.stop();
     }
 
     @Override
@@ -1318,8 +1260,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         Source.get().exit();
         PlaybackService.stop();
         App.removeCallbacks(mR1, mR2, mR3);
-        mViewModel.url.removeObserver(mObserveUrl);
-        mViewModel.epg.removeObserver(mObserveEpg);
+        mViewModel.url().removeObserver(mObserveUrl);
+        mViewModel.epg().removeObserver(mObserveEpg);
         super.onDestroy();
     }
 }

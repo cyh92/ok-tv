@@ -1,22 +1,14 @@
 package com.fongmi.android.tv.ui.custom;
 
-import static com.tencent.smtt.sdk.WebSettings.*;
-
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Build;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
-import android.view.ViewParent;
-
-//import android.webkit.WebChromeClient;
-//import android.webkit.WebSettings;
-//import android.webkit.WebView;
-//import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
@@ -26,7 +18,6 @@ import com.tencent.smtt.sdk.WebSettings;
 import com.tencent.smtt.sdk.WebView;
 import com.tencent.smtt.sdk.WebViewClient;
 
-import com.fongmi.android.tv.bean.Channel;
 import com.orhanobut.logger.Logger;
 
 public class WebViewPlayer extends FrameLayout {
@@ -34,15 +25,12 @@ public class WebViewPlayer extends FrameLayout {
     private static final String TAG = "WebViewPlayer";
     public WebView webView;
     private ProgressBar progressBar;
-    private View touchInterceptor;
     private boolean isUserInteractionEnabled = false; // 默认禁用用户交互
     private VideoPlayerCallback callback;
-    private boolean isVideoDetected = false;
     
     public interface VideoPlayerCallback {
-        void onVideoFound(int videoCount);
-        void onVideoPlaying();
-        void onVideoError(String error);
+        void onPageStarted();
+        void onPageFinished(WebView webView);
         void onPageLoadProgress(int progress);
     }
 
@@ -59,32 +47,37 @@ public class WebViewPlayer extends FrameLayout {
         init(context);
     }
     public void start(Result result) {
-        isVideoDetected = false;
+        if (result == null || result.getUrl() == null) {
+            Logger.t(TAG).e("Invalid result: result or URL is null");
+            return;
+        }
         Logger.t(TAG).d("Starting WebView with URL: " + result.getUrl());
         Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
         Logger.t(TAG).d("触摸透明状态: " + isTouchTransparent());
-        
+
         webView.loadUrl(result.getUrl().v(), result.getHeader());
-        
+        // 添加显示动画
+        webView.setAlpha(0f);
+        webView.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start();
         // 注入JavaScript禁用用户交互
         if (!isUserInteractionEnabled) {
             injectDisableInteractionScript();
         }
     }
-    
-    public void stop(){
-        isVideoDetected = false;
-        webView.stopLoading();
-        webView.loadUrl("about:blank");
+
+    public void stop() {
+        if (webView != null) {
+            webView.stopLoading();
+            webView.loadUrl("about:blank");
+        }
         Logger.t(TAG).d("WebView stopped");
     }
-    
+
     public void setCallback(VideoPlayerCallback callback) {
         this.callback = callback;
-    }
-    
-    public boolean isVideoDetected() {
-        return isVideoDetected;
     }
     private void init(Context context) {
         initWebView(context);
@@ -141,9 +134,7 @@ public class WebViewPlayer extends FrameLayout {
         settings.setGeolocationEnabled(false);
         
         // Mixed content handling for secure streaming
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            settings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
-        }
+        settings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false);
@@ -168,7 +159,23 @@ public class WebViewPlayer extends FrameLayout {
     }
 
     private void setDefaultWebClients() {
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient(){
+            @Override
+            public void onPageStarted(WebView webView, String url, Bitmap favicon) {
+                super.onPageStarted(webView, url, favicon);
+                webView.setBackgroundColor(Color.BLACK); // 立即设置黑色背景
+                if (callback != null) {
+                    callback.onPageStarted();
+                }
+            }
+            @Override
+            public void onPageFinished(WebView webView, String url) {
+                super.onPageFinished(webView, url);
+                if (callback != null) {
+                    callback.onPageFinished(webView);
+                }
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
@@ -183,30 +190,9 @@ public class WebViewPlayer extends FrameLayout {
                 
                 Logger.t(TAG).d("Page load progress: " + newProgress + "%");
             }
-            
-            @Override
-            public boolean onConsoleMessage(com.tencent.smtt.export.external.interfaces.ConsoleMessage consoleMessage) {
-                String message = consoleMessage.message();
-                Logger.t(TAG + "-Console").d(message);
-                
-                // 检测视频相关消息
-                if (message.contains("发现") && message.contains("视频元素")) {
-                    isVideoDetected = true;
-                    if (callback != null) {
-                        try {
-                            int videoCount = Integer.parseInt(message.replaceAll("\\D+", ""));
-                            callback.onVideoFound(videoCount);
-                        } catch (NumberFormatException e) {
-                            callback.onVideoFound(1);
-                        }
-                    }
-                }
-                
-                return super.onConsoleMessage(consoleMessage);
-            }
+
         });
     }
-
     private void initProgressBar(Context context) {
         progressBar = new ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, dpToPx(2)));
@@ -217,7 +203,6 @@ public class WebViewPlayer extends FrameLayout {
     private void initTouchInterceptor(Context context) {
         // 简化实现：不再需要额外的触摸拦截器
         // 直接通过WebViewPlayer的onTouchEvent处理
-        touchInterceptor = null;
     }
 
     private void addViewsToLayout() {
@@ -267,18 +252,6 @@ public class WebViewPlayer extends FrameLayout {
         }
         return super.onKeyDown(keyCode, event);
     }
-    public void setWebViewClient(WebViewClient client) {
-        if (webView != null) {
-            webView.setWebViewClient(client);
-        }
-    }
-
-    public void setWebChromeClient(WebChromeClient client) {
-        if (webView != null) {
-            webView.setWebChromeClient(client);
-        }
-    }
-
     public void setUserInteractionEnabled(boolean enabled) {
         isUserInteractionEnabled = enabled;
         // 不再需要touchInterceptor，直接通过WebView设置处理
@@ -328,22 +301,7 @@ public class WebViewPlayer extends FrameLayout {
     public boolean isTouchTransparent() {
         return !isClickable() && !isFocusable();
     }
-    
-    /**
-     * 测试触摸事件流程（从 LiveActivity 调用）
-     */
-    public void testTouchEventFlow() {
-        Logger.t(TAG).d("=== 测试触摸事件流程 ===");
-        Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
-        Logger.t(TAG).d("WebViewPlayer可点击: " + isClickable());
-        Logger.t(TAG).d("WebViewPlayer可聚焦: " + isFocusable());
-        Logger.t(TAG).d("WebView可点击: " + (webView != null ? webView.isClickable() : "null"));
-        Logger.t(TAG).d("父视图类型: " + (getParent() != null ? getParent().getClass().getSimpleName() : "null"));
-        Logger.t(TAG).d("视图层级: " + getClass().getSimpleName() + " -> " + 
-                      (getParent() != null ? getParent().getClass().getSimpleName() : "null"));
-        Logger.t(TAG).d("========================");
-    }
-    
+
     /**
      * 注入JavaScript禁用网页内容交互，但不影响LiveActivity手势
      */

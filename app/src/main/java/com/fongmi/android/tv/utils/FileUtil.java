@@ -81,14 +81,14 @@ public class FileUtil {
     }
 
     public static void clearCache(Callback callback) {
-        App.execute(() -> {
+        Task.execute(() -> {
             Path.clear(Path.cache());
             App.post(callback::success);
         });
     }
 
     public static void getCacheSize(Callback callback) {
-        App.execute(() -> {
+        Task.execute(() -> {
             String usage = byteCountToDisplaySize(getDirectorySize(Path.cache()));
             App.post(() -> callback.success(usage));
         });
@@ -97,7 +97,7 @@ public class FileUtil {
     public static long getDirectorySize(File dir) {
         long size = 0;
         if (dir == null) return 0;
-        if (dir.isDirectory()) for (File file: Path.list(dir)) size += getDirectorySize(file);
+        if (dir.isDirectory()) for (File file : Path.list(dir)) size += getDirectorySize(file);
         else size = dir.length();
         return size;
     }

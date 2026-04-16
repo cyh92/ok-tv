@@ -5,11 +5,14 @@ import android.text.TextUtils;
 import androidx.annotation.Nullable;
 
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.utils.Formatters;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.github.catvod.utils.Trans;
 import com.google.gson.annotations.SerializedName;
 
-import java.util.Calendar;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Objects;
 
 public class EpgData {
 
@@ -95,11 +98,12 @@ public class EpgData {
         return getStart() + " ~ " + getEnd();
     }
 
-    public void checkDay() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(getEndTime());
-        cal.add(Calendar.DAY_OF_MONTH, 1);
-        setEndTime(cal.getTimeInMillis());
+    public String getRange() {
+        return "clock=" + Formatters.EPG_RANGE.format(Instant.ofEpochMilli(getStartTime())) + "-" + Formatters.EPG_RANGE.format(Instant.ofEpochMilli(getEndTime()));
+    }
+
+    public void checkDay(ZoneId zoneId) {
+        setEndTime(Instant.ofEpochMilli(getEndTime()).atZone(zoneId).plusDays(1).toInstant().toEpochMilli());
     }
 
     public void trans() {
@@ -111,14 +115,11 @@ public class EpgData {
     public boolean equals(@Nullable Object obj) {
         if (this == obj) return true;
         if (!(obj instanceof EpgData it)) return false;
-        return getTitle().equals(it.getTitle()) && getEnd().equals(it.getEnd()) && getStart().equals(it.getStart());
+        return Objects.equals(getTitle(), it.getTitle()) && Objects.equals(getEnd(), it.getEnd()) && Objects.equals(getStart(), it.getStart());
     }
 
     @Override
     public int hashCode() {
-        int result = getTitle().hashCode();
-        result = 31 * result + getEnd().hashCode();
-        result = 31 * result + getStart().hashCode();
-        return result;
+        return Objects.hash(getTitle(), getEnd(), getStart());
     }
 }

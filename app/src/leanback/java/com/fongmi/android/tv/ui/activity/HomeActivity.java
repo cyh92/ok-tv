@@ -41,6 +41,7 @@ import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.ActivityHomeBinding;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.event.CastEvent;
+import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.event.ServerEvent;
 import com.fongmi.android.tv.impl.Callback;
@@ -149,6 +150,14 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 if (mPresenter.isDelete()) setHistoryDelete(false);
             }
         });
+        mBinding.tabMenu.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
+            @Override
+            public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
+                if (child != null && position != 0) {
+                    VodActivity.start(HomeActivity.this, mResult);
+                }
+            }
+        });
     }
 
     private void checkAction(Intent intent) {
@@ -184,7 +193,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
-        mViewModel.result.observe(this, result -> {
+        mViewModel.getResult().observe(this, result -> {
             mAdapter.remove("progress");
             addVideo(mResult = result);
             Cache.clear().put(result);
@@ -249,16 +258,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private Callback getCallback() {
         return new Callback() {
             @Override
-            public void success(String result) {
-                Notify.show(result);
-            }
-
-            @Override
             public void success() {
                 showContent();
-                getHistory();
-                getVideo();
-                setLogo();
             }
 
             @Override
@@ -273,7 +274,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mBinding.progressLayout.showContent();
         checkAction(getIntent());
         setFocus();
-        setFunc();
     }
 
     private void loadLive(String url) {
@@ -288,11 +288,14 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private void setFocus() {
         mBinding.title.setSelected(true);
         App.post(() -> mBinding.title.setFocusable(true), 500);
-        if (!mBinding.title.hasFocus()) mBinding.recycler.requestFocus();
+        if (Setting.getHomeUI() == 1) {
+            mBinding.tabMenu.requestFocus();
+        } else if (!mBinding.title.hasFocus()) {
+            mBinding.recycler.requestFocus();
+        }
     }
 
     private void getVideo() {
-        setTitle();
         mResult = Result.empty();
         int index = getRecommendIndex();
         boolean gone = mAdapter.indexOf("progress") == -1;
@@ -382,14 +385,28 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onRefreshEvent(RefreshEvent event) {
-        switch (event.getType()) {
-            case CONFIG:
-                setFunc();
+    public void onConfigEvent(ConfigEvent event) {
+        switch (event.type()) {
+            case VOD:
+                RefreshEvent.history();
+                RefreshEvent.home();
                 setLogo();
                 break;
-            case VIDEO:
+            case COMMON:
+                setFunc();
+                break;
+            case BOOT:
+                LiveActivity.start(this);
+                break;
+        }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onRefreshEvent(RefreshEvent event) {
+        switch (event.getType()) {
+            case HOME:
                 getVideo();
+                setTitle();
                 break;
             case HISTORY:
                 getHistory();
@@ -403,22 +420,22 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onServerEvent(ServerEvent event) {
-        switch (event.getType()) {
+        switch (event.type()) {
             case SEARCH:
-                CollectActivity.start(this, event.getText());
+                CollectActivity.start(this, event.text());
                 break;
             case PUSH:
-                VideoActivity.push(this, event.getText());
+                VideoActivity.push(this, event.text());
                 break;
         }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onCastEvent(CastEvent event) {
-        if (VodConfig.get().getConfig().equals(event.getConfig())) {
-            VideoActivity.cast(this, event.getHistory().save(VodConfig.getCid()));
+        if (VodConfig.get().getConfig().equals(event.config())) {
+            VideoActivity.cast(this, event.history().save(VodConfig.getCid()));
         } else {
-            VodConfig.load(event.getConfig(), getCallback(event));
+            VodConfig.load(event.config(), getCallback(event));
         }
     }
 
@@ -426,9 +443,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         return new Callback() {
             @Override
             public void success() {
-                RefreshEvent.history();
-                RefreshEvent.config();
-                RefreshEvent.video();
                 onCastEvent(event);
             }
 
@@ -516,7 +530,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     public void setSite(Site item) {
         VodConfig.get().setHome(item);
-        getVideo();
     }
 
     @Override
@@ -574,9 +587,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void onItemClick(Class item) {
-        if (!"home".equals(item.getTypeId())) {
-            VodActivity.start(this, mResult);
-        }
+
     }
 
     @Override

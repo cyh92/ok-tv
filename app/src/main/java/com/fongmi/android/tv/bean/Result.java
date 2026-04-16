@@ -83,6 +83,10 @@ public class Result implements Parcelable {
     private String click;
     @SerializedName("key")
     private String key;
+    @SerializedName("lrc")
+    private String lrc;
+    @SerializedName("position")
+    private Long position;
     @SerializedName("pagecount")
     private Integer pagecount;
     @SerializedName("parse")
@@ -267,6 +271,14 @@ public class Result implements Parcelable {
         this.key = key;
     }
 
+    public String getLrc() {
+        return TextUtils.isEmpty(lrc) ? "" : lrc;
+    }
+
+    public Long getPosition() {
+        return position;
+    }
+
     public Integer getPageCount() {
         return pagecount == null ? 0 : pagecount;
     }
@@ -297,6 +309,18 @@ public class Result implements Parcelable {
 
     public boolean hasMsg() {
         return !getMsg().isEmpty();
+    }
+
+    public boolean hasArtwork() {
+        return !getArtwork().isEmpty();
+    }
+
+    public boolean hasPosition() {
+        return getPosition() != null;
+    }
+
+    public boolean hasDesc() {
+        return !getDesc().isEmpty();
     }
 
     public String getRealUrl() {

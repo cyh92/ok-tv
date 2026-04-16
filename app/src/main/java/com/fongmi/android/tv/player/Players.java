@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
+//import androidx.media3.common.MediaTitle;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
@@ -59,6 +60,7 @@ import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.Task;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.utils.Path;
@@ -79,9 +81,8 @@ import master.flame.danmaku.ui.widget.DanmakuView;
 public class Players implements Player.Listener, ParseCallback {
 
     private static final String TAG = Players.class.getSimpleName();
-
-    public static final int SOFT = 0;
-    public static final int HARD = 1;
+    private static final int SOFT = 0;
+    private static final int HARD = 1;
 
     private final ErrorMsgProvider provider;
     private final AudioManager audioManager;
@@ -109,12 +110,6 @@ public class Players implements Player.Listener, ParseCallback {
     private int decode;
     private int retry;
 
-    public static Players create(Activity activity) {
-        Players player = new Players(activity);
-        Server.get().setPlayer(player);
-        return player;
-    }
-
     private Players(Activity activity) {
         decode = HARD;
         builder = new StringBuilder();
@@ -123,6 +118,12 @@ public class Players implements Player.Listener, ParseCallback {
         formatter = new Formatter(builder, Locale.getDefault());
         audioManager = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
         createSession(activity);
+    }
+
+    public static Players create(Activity activity) {
+        Players player = new Players(activity);
+        Server.get().setPlayer(player);
+        return player;
     }
 
     private void createSession(Activity activity) {
@@ -191,6 +192,14 @@ public class Players implements Player.Listener, ParseCallback {
         setMediaItem();
     }
 
+//    public void setTitle(MediaTitle title) {
+//        Uri uri = UrlUtil.uri(url);
+//        Uri newUri = uri.buildUpon().fragment("title=" + title.index).build();
+//        url = newUri.toString();
+//        setMediaItem();
+//        seekTo(0);
+//    }
+
     public String getKey() {
         return key != null ? key : url;
     }
@@ -253,13 +262,13 @@ public class Players implements Player.Listener, ParseCallback {
         return exoPlayer == null ? 0 : exoPlayer.getBufferedPosition();
     }
 
-    public boolean retried() {
-        return ++retry > 2;
-    }
-
     public boolean haveTrack(int type) {
         return exoPlayer != null && TrackUtil.count(exoPlayer.getCurrentTracks(), type) > 0;
     }
+
+//    public boolean haveTitle() {
+//        return exoPlayer != null && !exoPlayer.getCurrentMediaTitles().isEmpty();
+//    }
 
     public boolean haveDanmaku() {
         if (danmakus != null) for (Danmaku danmaku : danmakus) if (danmaku.isSelected()) return true;
@@ -411,7 +420,7 @@ public class Players implements Player.Listener, ParseCallback {
         releaseSession();
         removeTimeoutCheck();
         Server.get().setPlayer(null);
-        App.execute(() -> Source.get().stop());
+        Task.execute(() -> Source.get().stop());
     }
 
     private void releasePlayer() {
@@ -466,7 +475,7 @@ public class Players implements Player.Listener, ParseCallback {
         return subs;
     }
 
-    private void setMediaItem() {
+    public void setMediaItem() {
         if (url != null) setMediaItem(headers, url, format, drm, subs, danmakus, Constant.TIMEOUT_PLAY);
     }
 
@@ -666,10 +675,15 @@ public class Players implements Player.Listener, ParseCallback {
         initTrack = true;
     }
 
+//    @Override
+//    public void onMediaTitlesChanged(@NonNull List<MediaTitle> titles) {
+//        PlayerEvent.title(tag);
+//    }
+
     @Override
-    public void onPlayerError(@NonNull PlaybackException error) {
-        if (retried()) ErrorEvent.extract(tag, provider.get(error));
-        else switch (error.errorCode) {
+    public void onPlayerError(@NonNull PlaybackException e) {
+        if (++retry > 2) ErrorEvent.extract(tag, provider.get(e));
+        else switch (e.errorCode) {
             case PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW:
                 seekToDefaultPosition();
                 break;
@@ -683,10 +697,10 @@ public class Players implements Player.Listener, ParseCallback {
             case PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED:
             case PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED:
             case PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED:
-                setFormat(ExoUtil.getMimeType(error.errorCode));
+                setFormat(ExoUtil.getMimeType(e.errorCode));
                 break;
             default:
-                ErrorEvent.extract(tag, provider.get(error));
+                ErrorEvent.extract(tag, provider.get(e));
                 break;
         }
     }

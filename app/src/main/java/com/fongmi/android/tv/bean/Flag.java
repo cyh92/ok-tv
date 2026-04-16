@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class Flag implements Parcelable, Diffable<Flag> {
 
@@ -121,7 +122,14 @@ public class Flag implements Parcelable, Diffable<Flag> {
             String[] split = urls[i].split("\\$", 2);
             String number = String.format(Locale.getDefault(), "%02d", i + 1);
             Episode episode = split.length > 1 ? Episode.create(split[0].isEmpty() ? number : split[0].trim(), split[1]) : Episode.create(number, urls[i]);
-            if (!getEpisodes().contains(episode)) getEpisodes().add(episode);
+            getEpisodes().add(episode);
+        }
+    }
+
+    public void mergeEpisodes(List<Episode> items, boolean rev) {
+        for (Episode item : items) {
+            if (rev) getEpisodes().add(0, item);
+            else getEpisodes().add(item);
         }
     }
 
@@ -135,12 +143,12 @@ public class Flag implements Parcelable, Diffable<Flag> {
     public boolean equals(@Nullable Object obj) {
         if (this == obj) return true;
         if (!(obj instanceof Flag it)) return false;
-        return getFlag().equals(it.getFlag());
+        return Objects.equals(getFlag(), it.getFlag());
     }
 
     @Override
     public int hashCode() {
-        return getFlag().hashCode();
+        return Objects.hash(getFlag());
     }
 
     @NonNull
