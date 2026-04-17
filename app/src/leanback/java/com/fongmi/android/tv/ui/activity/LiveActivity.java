@@ -57,6 +57,7 @@ import com.fongmi.android.tv.ui.base.PlaybackActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
 import com.fongmi.android.tv.ui.custom.CustomLiveListView;
 import com.fongmi.android.tv.ui.custom.CustomSeekView;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
@@ -67,10 +68,16 @@ import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
+import com.orhanobut.logger.Logger;
+import com.tencent.smtt.sdk.WebView;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -97,6 +104,9 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     private Clock mClock;
     private View mFocus2;
     private int count;
+
+    private WebViewPlayer webPlayer;
+    private long mExitTime = 0;//退出响应时间
 
     public static void start(Context context) {
         context.startActivity(new Intent(context, LiveActivity.class).putExtra("empty", LiveConfig.isEmpty()));
@@ -154,6 +164,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
+        webPlayer = new WebViewPlayer(this);//初始化webview
         mClock = Clock.create(mBinding.widget.clock);
         mKeyDown = CustomKeyDownLive.create(this);
         mObserveEpg = this::setEpg;
@@ -198,7 +209,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.group.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override
             public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
-                if (mGroupAdapter.getItemCount() > 0) onChildSelected(child, mGroup = mGroupAdapter.get(position));
+                if (mGroupAdapter.getItemCount() > 0)
+                    onChildSelected(child, mGroup = mGroupAdapter.get(position));
             }
         });
     }
@@ -213,6 +225,9 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void setVideoView() {
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
+
         setScale(Setting.getLiveScale());
         findViewById(R.id.timeBar).setNextFocusUpId(R.id.config);
         mBinding.control.action.invert.setActivated(Setting.isInvert());
@@ -279,7 +294,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void setWidth(Live live) {
         int padding = ResUtil.dp2px(52);
-        if (live.getWidth() == 0) for (Group item : live.getGroups()) live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
+        if (live.getWidth() == 0) for (Group item : live.getGroups())
+            live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
         int width = live.getWidth() == 0 ? 0 : Math.min(live.getWidth() + padding, ResUtil.getScreenWidth() / 4);
         setWidth(mBinding.group, width);
     }
@@ -288,7 +304,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         int logo = ResUtil.dp2px(60);
         int padding = ResUtil.dp2px(64);
         if (group.isKeep()) group.setWidth(0);
-        if (group.getWidth() == 0) for (Channel item : group.getChannel()) group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
+        if (group.getWidth() == 0) for (Channel item : group.getChannel())
+            group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
         int width = group.getWidth() == 0 ? 0 : Math.min(group.getWidth() + padding, ResUtil.getScreenWidth() / 2);
         setWidth(mBinding.channel, width);
         return group;
@@ -298,7 +315,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         int padding = ResUtil.dp2px(52);
         if (epg.getList().isEmpty()) return;
         int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 14);
-        if (epg.getWidth() == 0) for (EpgData item : epg.getList()) epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
+        if (epg.getWidth() == 0) for (EpgData item : epg.getList())
+            epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
         int width = epg.getWidth() == 0 ? 0 : Math.min(Math.max(epg.getWidth(), minWidth) + padding, ResUtil.getScreenWidth() / 2);
         setWidth(mBinding.epgData, width);
     }
@@ -519,7 +537,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void showEpg(Channel item) {
-        if (mChannel == null || mChannel.getData(mViewModel.getZoneId()).getList().isEmpty() || mEpgDataAdapter.getItemCount() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup)) return;
+        if (mChannel == null || mChannel.getData(mViewModel.getZoneId()).getList().isEmpty() || mEpgDataAdapter.getItemCount() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup))
+            return;
         mBinding.epgData.setSelectedPosition(mChannel.getData(mViewModel.getZoneId()).getSelected());
         mBinding.epgData.setVisibility(View.VISIBLE);
         mBinding.channel.setVisibility(View.GONE);
@@ -711,7 +730,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         EpgData data = epg.getEpgData();
         boolean hasTitle = !data.getTitle().isEmpty();
         mEpgDataAdapter.addAll(epg.getList());
-        if (hasTitle) mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getShow(), data.getTitle()));
+        if (hasTitle)
+            mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getShow(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
         setWidth(epg);
@@ -740,7 +760,88 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void start(Result result) {
-        startPlayer(getPlaybackKey(), result, false, getHome().getTimeout(), buildMetadata());
+        mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
+        if (result.getParse() == 2) {
+            Logger.t("LiveActivity").d("切换到WebView模式");
+            showWebView(result);
+        } else {
+            Logger.t("LiveActivity").d("切换到标准播放器模式");
+            webPlayer.stop();
+            webPlayer.setVisibility(View.GONE);
+            mBinding.exo.setVisibility(View.VISIBLE);
+
+            startPlayer(getPlaybackKey(), result, false, getHome().getTimeout(), buildMetadata());
+        }
+    }
+
+    // 显示WebView并加载URL
+    private void showWebView(Result result) {
+        try {
+            Logger.t("LiveActivity").d("初始化WebView播放器");
+            webPlayer.stop();
+            mBinding.exo.setVisibility(View.GONE);
+            webPlayer.setVisibility(View.VISIBLE);
+            // webPlayer现在在最底层，不需要bringToFront
+
+            // 检查WebViewPlayer的触摸透明状态
+            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
+            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
+
+            // 设置回调监听
+            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
+                @Override
+                public void onPageStarted() {
+                    showProgress();
+                }
+
+                private boolean isScriptInjected = false;
+
+                @Override
+                public void onPageFinished(WebView webView) {
+                    Logger.t("WebView").e("页面加载完成");
+
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
+                    hideProgress();
+                }
+
+                @Override
+                public void onPageLoadProgress(int progress) {
+                    if (progress > 99) {
+                        hideProgress();
+                    }
+                }
+            });
+            webPlayer.start(result);
+
+
+        } catch (Exception e) {
+            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+        }
+    }
+
+    //注入js
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
+        }
     }
 
     private void resetAdapter() {
@@ -844,6 +945,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.control.action.audio.setVisibility(player().haveTrack(C.TRACK_TYPE_AUDIO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.video.setVisibility(player().haveTrack(C.TRACK_TYPE_VIDEO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.speed.setVisibility(player().isVod() ? View.VISIBLE : View.GONE);
+        mBinding.control.seek.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏进度条
     }
 
     private MediaMetadata buildMetadata() {
@@ -989,14 +1091,14 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void onKeyUp() {
-        if (Setting.isInvert()) nextChannel();
-        else prevChannel();
+        if (Setting.isInvert()) prevChannel();
+        else nextChannel();
     }
 
     @Override
     public void onKeyDown() {
-        if (Setting.isInvert()) prevChannel();
-        else nextChannel();
+        if (Setting.isInvert()) nextChannel();
+        else prevChannel();
     }
 
     @Override
@@ -1055,7 +1157,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         } else if (isVisible(mBinding.recycler)) {
             hideUI();
         } else {
-            if (isTaskRoot()) startActivity(new Intent(this, HomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+            if (isTaskRoot())
+                startActivity(new Intent(this, HomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
             super.onBackInvoked();
         }
     }

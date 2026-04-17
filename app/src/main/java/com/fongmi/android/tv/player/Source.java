@@ -6,14 +6,7 @@ import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
-import com.fongmi.android.tv.player.extractor.Force;
-import com.fongmi.android.tv.player.extractor.JianPian;
-import com.fongmi.android.tv.player.extractor.Push;
-import com.fongmi.android.tv.player.extractor.Strm;
-import com.fongmi.android.tv.player.extractor.TVBus;
-import com.fongmi.android.tv.player.extractor.Thunder;
-import com.fongmi.android.tv.player.extractor.Video;
-import com.fongmi.android.tv.player.extractor.Youtube;
+import com.fongmi.android.tv.player.extractor.*;
 import com.fongmi.android.tv.utils.Task;
 
 import java.util.ArrayList;
@@ -40,6 +33,7 @@ public class Source {
         extractors.add(new TVBus());
         extractors.add(new Video());
         extractors.add(new Youtube());
+        extractors.add(new WebView()); // 添加新解析器
     }
 
     public static Source get() {
@@ -83,6 +77,7 @@ public class Source {
         Extractor extractor = getExtractor(uri);
         if (extractor != null) result.setParse(0);
         if (extractor instanceof Video) result.setParse(1);
+        if (extractor instanceof WebView) result.setParse(2);//WebView模式
         return extractor == null ? url : extractor.fetch(url);
     }
 

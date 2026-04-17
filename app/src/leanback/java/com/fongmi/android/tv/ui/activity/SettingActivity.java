@@ -7,6 +7,8 @@ import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.BuildConfig;
@@ -83,6 +85,8 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
     protected void initView(Bundle savedInstanceState) {
         mBinding.vod.requestFocus();
         mBinding.vodUrl.setText(VodConfig.getDesc());
+        mBinding.vod.requestFocus();
+        mBinding.vodUrl.setText(VodConfig.getDesc());
         mBinding.liveUrl.setText(LiveConfig.getDesc());
         mBinding.wallUrl.setText(WallConfig.getDesc());
         mBinding.versionText.setText(BuildConfig.VERSION_NAME);
@@ -128,6 +132,7 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         mBinding.wallDefault.setOnClickListener(this::setWallDefault);
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
         mBinding.wallRefresh.setOnLongClickListener(this::onWallHistory);
+        mBinding.custom.setOnClickListener(this::onCustom);
     }
 
     @Override
@@ -230,6 +235,9 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
 
     private void onPlayer(View view) {
         SettingPlayerActivity.start(this);
+    }
+      private void onCustom(View view) {
+        SettingCustomActivity.start(this);
     }
 
     private void onVersion(View view) {

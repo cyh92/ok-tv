@@ -296,7 +296,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         mObservePlayer = this::setPlayer;
         mObserveSearch = this::setSearch;
         mBroken = new ArrayList<>();
-        mClock = Clock.create();
+        mClock = Clock.create(mBinding.control.clock);
         mR1 = this::hideControl;
         mR2 = this::setTraffic;
         mR3 = this::setOrient;

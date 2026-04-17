@@ -67,3 +67,8 @@
 
 # Zxing
 -keep class com.google.zxing.** { *; }
+
+-dontwarn sun.misc.**
+-dontwarn dalvik.system.VMStack
+# 抑制其他可能缺失的类警告
+-dontwarn javax.annotation.**

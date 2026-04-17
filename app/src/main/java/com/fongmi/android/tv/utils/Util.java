@@ -187,4 +187,23 @@ public class Util {
         StringBuilder sb = new StringBuilder();
         return format(sb, new Formatter(sb, Locale.getDefault()), timeMs);
     }
+
+    // public static Intent getChooser(Intent intent) {
+    //     List<ComponentName> components = new ArrayList<>();
+    //     for (ResolveInfo resolveInfo : App.get().getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)) {
+    //         String pkgName = resolveInfo.activityInfo.packageName;
+    //         if (pkgName.equals(App.get().getPackageName())) {
+    //             components.add(new ComponentName(pkgName, resolveInfo.activityInfo.name));
+    //         }
+    //     }
+    //     return Intent.createChooser(intent, null).putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, components.toArray(new ComponentName[0]));
+    // }
+    
+     public static void restartApp(Activity activity) {
+        Intent intent = activity.getBaseContext().getPackageManager().getLaunchIntentForPackage(activity.getBaseContext().getPackageName());
+        ComponentName componentName = intent.getComponent();
+        Intent mainIntent = Intent.makeRestartActivityTask(componentName);
+        activity.startActivity(mainIntent);
+        Runtime.getRuntime().exit(0);
+    }
 }

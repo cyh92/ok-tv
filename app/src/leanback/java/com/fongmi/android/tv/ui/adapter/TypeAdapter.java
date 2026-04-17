@@ -19,14 +19,24 @@ public class TypeAdapter extends RecyclerView.Adapter<TypeAdapter.ViewHolder> {
 
     private final OnClickListener mListener;
     private final List<Class> mItems;
+    private Class mFixedItem;
 
     public TypeAdapter(OnClickListener listener) {
         mListener = listener;
         mItems = new ArrayList<>();
     }
 
+    public void setFixedItem(Class item) {
+        mFixedItem = item;
+    }
+
+    public Class getFixedItem() {
+        return mFixedItem;
+    }
+
     public void addAll(List<Class> items) {
         mItems.clear();
+        if (mFixedItem != null) mItems.add(mFixedItem);
         mItems.addAll(items);
         notifyDataSetChanged();
     }
