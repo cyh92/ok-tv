@@ -70,16 +70,16 @@ android {
         }
     }
 
-    android.applicationVariants.configureEach { variant ->
-        if (variant.buildType.name == 'release' && variant.productFlavors[0].name == 'mobile') {
-//            variant.mergeAssets.doLast {
-//                delete(fileTree(dir: variant.mergeAssets.outputDir, includes: ['x5.tbs.apk']))
+//    android.applicationVariants.configureEach { variant ->
+//        if (variant.buildType.name == 'release' && variant.productFlavors[0].name == 'mobile') {
+////            variant.mergeAssets.doLast {
+////                delete(fileTree(dir: variant.mergeAssets.outputDir, includes: ['x5.tbs.apk']))
+////            }
+//            variant.mergeAssetsProvider.get().doLast {
+//                delete(fileTree(dir: variant.mergeAssetsProvider.get().outputDir, includes: ['x5.tbs.apk']))
 //            }
-            variant.mergeAssetsProvider.get().doLast {
-                delete(fileTree(dir: variant.mergeAssetsProvider.get().outputDir, includes: ['x5.tbs.apk']))
-            }
-        }
-    }
+//        }
+//    }
 
     configurations.configureEach {
         resolutionStrategy {

@@ -8,18 +8,18 @@ import java.io.File;
 
 public class Github {
 
-    public static final String URL = "https://raw.gitcode.com/cyh92/Release/raw/main";
-
-    private static String getUrl(String path, String name) {
-        return URL + "/" + path + "/" + name;
+    public static final String downloadURL = "https://gitee.com/cyh92/live/releases/download";
+    public static final String releaseURL = "https://gitee.com/cyh92/live/raw/main";
+    private static String getUrl(String name) {
+        return downloadURL + "/oktv/" + name;
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl("apk/" + (dev ? "dev" : "release"), name + ".json");
+        return releaseURL + "/release/" + name + "5.json";
     }
 
     public static String getApk(boolean dev, String name) {
-        return getUrl("apk/" + (dev ? "dev" : "release"), name + ".apk");
+        return getUrl(name + ".apk");
     }
 
     public static String getSo(String url) {

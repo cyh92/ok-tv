@@ -12,6 +12,7 @@ import com.fongmi.android.tv.player.extractor.Push;
 import com.fongmi.android.tv.player.extractor.TVBus;
 import com.fongmi.android.tv.player.extractor.Thunder;
 import com.fongmi.android.tv.player.extractor.Video;
+import com.fongmi.android.tv.player.extractor.WebView;
 import com.fongmi.android.tv.player.extractor.Youtube;
 import com.fongmi.android.tv.player.extractor.ZLive;
 import com.fongmi.android.tv.utils.UrlUtil;
@@ -48,6 +49,7 @@ public class Source {
         extractors.add(new Video());
         extractors.add(new Youtube());
         extractors.add(new ZLive());
+        extractors.add(new WebView()); // 添加新解析器
     }
 
     private Extractor getExtractor(String url) {
@@ -92,6 +94,7 @@ public class Source {
         Extractor extractor = getExtractor(url);
         if (extractor != null) channel.setParse(0);
         if (extractor instanceof Video) channel.setParse(1);
+        if (extractor instanceof WebView) channel.setMode(1);
         return extractor == null ? url : extractor.fetch(url);
     }
 

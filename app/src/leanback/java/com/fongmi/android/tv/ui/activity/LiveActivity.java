@@ -52,6 +52,7 @@ import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
 import com.fongmi.android.tv.ui.custom.CustomLiveListView;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerDialog;
@@ -66,10 +67,16 @@ import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.orhanobut.logger.Logger;
+import com.tencent.smtt.sdk.WebView;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -99,6 +106,8 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
     private int toggleCount;
     private int errorCount;
     private int count;
+
+    private WebViewPlayer webPlayer;
 
     public static void start(Context context) {
         if (!LiveConfig.isEmpty()) context.startActivity(new Intent(context, LiveActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("empty", false));
@@ -149,6 +158,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
 
     @Override
     protected void initView() {
+        webPlayer = new WebViewPlayer(this);//初始化webview
         mClock = Clock.create(Arrays.asList(mBinding.widget.clock, mBinding.display.clock));
         mKeyDown = CustomKeyDownLive.create(this);
         mPlayers = Players.create(this);
@@ -222,6 +232,9 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
     }
 
     private void setVideoView() {
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
+
         mPlayers.init(getExo(), getIjk());
         setScale(Setting.getLiveScale());
         ExoUtil.setSubtitleView(mBinding.exo);
@@ -247,7 +260,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(LiveViewModel.class);
-        mViewModel.url.observe(this, result -> mPlayers.start(result, getTimeout()));
+        mViewModel.url.observe(this, this::start);
         mViewModel.xml.observe(this, this::setEpg);
         mViewModel.epg.observe(this, this::setEpg);
         mViewModel.live.observe(this, live -> {
@@ -256,6 +269,91 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
             setGroup(live);
             setWidth(live);
         });
+    }
+    private void start(Channel result) {
+        if (result.getMode() == 1) {
+            showWebView(result);
+        } else {
+            webPlayer.stop();
+            webPlayer.setVisibility(View.GONE);
+
+            mPlayers.start(result, getTimeout());
+
+            getExo().setVisibility(View.VISIBLE);
+            getIjk().setVisibility(View.VISIBLE);
+
+        }
+    }
+    // 显示WebView并加载URL
+    private void showWebView(Channel result) {
+        try {
+            Logger.t("LiveActivity").d("初始化WebView播放器");
+            webPlayer.stop();
+            getExo().setVisibility(View.GONE);
+            getIjk().setVisibility(View.GONE);
+
+            webPlayer.setVisibility(View.VISIBLE);
+            // webPlayer现在在最底层，不需要bringToFront
+
+            // 检查WebViewPlayer的触摸透明状态
+            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
+            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
+
+            // 设置回调监听
+            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
+                @Override
+                public void onPageStarted() {
+                    showProgress();
+                }
+
+                private boolean isScriptInjected = false;
+
+                @Override
+                public void onPageFinished(WebView webView) {
+                    Logger.t("WebView").e("页面加载完成");
+
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
+                    hideProgress();
+                }
+
+                @Override
+                public void onPageLoadProgress(int progress) {
+                    if (progress > 99) {
+                        hideProgress();
+                    }
+                }
+            });
+            webPlayer.start(result);
+
+
+        } catch (Exception e) {
+            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+        }
+    }
+
+    //注入js
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
+        }
     }
 
     private void checkLive() {

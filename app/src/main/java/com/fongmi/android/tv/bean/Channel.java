@@ -54,6 +54,9 @@ public class Channel {
     @SerializedName("drm")
     private Drm drm;
 
+    @SerializedName("mode")
+    private Integer mode;
+
     private boolean selected;
     private Group group;
     private String url;
@@ -305,6 +308,15 @@ public class Channel {
     public boolean isLast() {
         return getUrls().isEmpty() || getLine() == getUrls().size() - 1;
     }
+
+    public Integer getMode() {
+        return mode == null ? 0 : mode;//0 普通模式 1 使用webview打开网页
+    }
+
+    public void setMode(Integer mode) {
+        this.mode = mode;
+    }
+
 
     public boolean hasCatchup() {
         if (getCatchup().isEmpty() && getCurrent().contains("/PLTV/")) setCatchup(Catchup.PLTV());
