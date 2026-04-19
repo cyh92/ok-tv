@@ -73,7 +73,7 @@ public class Tbs {
     }
 
     public static File file() {
-        File file = Path.cache("x5.tbs.apk");
+        File file = Path.cache("TBScore.apk");
         return file;
     }
 
@@ -118,7 +118,7 @@ public class Tbs {
             }
         };
         QbSdk.setTbsListener(tbsListener);
-        int version = isCpu64Bit() ? 46279 : 46914;
+        int version = isCpu64Bit() ? 46295 : 45912;
         QbSdk.reset(App.get());
         QbSdk.installLocalTbsCore(App.get(), version, file().getAbsolutePath());
     }
