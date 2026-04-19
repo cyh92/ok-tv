@@ -9,7 +9,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.WindowManager;
 
 import androidx.media3.common.C;
 import androidx.media3.common.MediaMetadata;
@@ -305,14 +304,12 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void onPaused() {
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         controller().pause();
     }
 
     private void onPlay() {
-        if (player().getPlaybackState() == Player.STATE_ENDED) controller().seekTo(0);
-        if (!player().isEmpty() && player().getPlaybackState() == Player.STATE_IDLE) controller().prepare();
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (isEnded()) controller().seekTo(0);
+        if (!player().isEmpty() && isIdle()) controller().prepare();
         controller().play();
     }
 
@@ -438,10 +435,9 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     public void onSeekEnd(long time) {
         if (player().isEmpty()) return;
         controller().seekTo(player().getPosition() + time);
+        controller().play();
         mKeyDown.reset();
-        showProgress();
         hideCenter();
-        onPlay();
     }
 
     @Override

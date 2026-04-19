@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -1029,19 +1028,16 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void seek(long time) {
         controller().seekTo(player().getPosition() + time);
+        controller().play();
         mKeyDown.reset();
-        showProgress();
         hideCenter();
-        onPlay();
     }
 
     private void onPaused() {
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         controller().pause();
     }
 
     private void onPlay() {
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         controller().play();
     }
 

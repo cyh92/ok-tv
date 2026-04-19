@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -35,6 +36,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     private PlaybackService mService;
     private boolean audioOnly;
     private boolean redirect;
+    private boolean bound;
     private boolean stop;
     private boolean lock;
 
@@ -98,9 +100,20 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         return key == null || (mService != null && key.equals(mService.player().getKey()));
     }
 
+    protected boolean isIdle() {
+        return controller().getPlaybackState() == Player.STATE_IDLE;
+    }
+
+    protected boolean isEnded() {
+        return controller().getPlaybackState() == Player.STATE_ENDED;
+    }
+
+    protected boolean isBuffering() {
+        return controller().getPlaybackState() == Player.STATE_BUFFERING;
+    }
+
     protected boolean isPaused() {
-        int state = controller().getPlaybackState();
-        return state != Player.STATE_BUFFERING && state != Player.STATE_IDLE;
+        return !isBuffering() && !isIdle();
     }
 
     protected void onServiceConnected() {
@@ -148,6 +161,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         startService(new Intent(this, PlaybackService.class));
         bindService(new Intent(this, PlaybackService.class).setAction(PlaybackService.LOCAL_BIND_ACTION), this, BIND_AUTO_CREATE);
         buildControllerAsync();
+        bound = true;
     }
 
     private void buildControllerAsync() {
@@ -167,9 +181,9 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     private void initPlayerViews() {
-        getExoView().setRender(Setting.getRender());
         PlayerHelper.setSubtitleView(getExoView());
         getSeekView().setPlayer(mController);
+        setRender();
     }
 
     private PendingIntent buildSessionIntent() {
@@ -197,6 +211,10 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         getExoView().setPlayer(null);
     }
 
+    private void setRender() {
+        getExoView().setRender(Setting.getRender());
+    }
+
     private void releasePlaybackService() {
         if (mService != null) releaseService(isOwner());
         detach();
@@ -205,8 +223,12 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     private void releaseService(boolean owner) {
         mService.removePlayerCallback(mPlayerCallback);
         if (owner) mService.setNavigationCallback(null, null);
-        if (mService.hasExternalClient() || mService.hasPlayerCallback()) mService.resetSessionActivity();
-        else if (owner) mService.shutdown();
+        if (mService.hasExternalClient() || mService.hasPlayerCallback()) {
+            if (owner) mService.suspend();
+            mService.resetSessionActivity();
+        } else if (owner) {
+            mService.shutdown();
+        }
     }
 
     private void detach() {
@@ -223,8 +245,9 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     private void releaseBinding() {
-        if (mService == null) return;
-        mService.removePlayerCallback(mPlayerCallback);
+        if (!bound) return;
+        bound = false;
+        if (mService != null) mService.removePlayerCallback(mPlayerCallback);
         unbindService(this);
         mService = null;
     }
@@ -253,7 +276,9 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
         @Override
         public void onPlayerRebuild(Player player) {
-            if (isOwner()) detachSurface();
+            if (!isOwner()) return;
+            detachSurface();
+            setRender();
         }
     };
 
@@ -265,7 +290,10 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     @Override
     public void onIsPlayingChanged(boolean isPlaying) {
-        if (isOwner()) onPlayingChanged(isPlaying);
+        if (!isOwner()) return;
+        if (isPlaying) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else if (!isBuffering()) getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        onPlayingChanged(isPlaying);
     }
 
     @Override
@@ -317,7 +345,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     protected void onStop() {
         super.onStop();
         if (isOwner()) detachSurface();
-        if (Setting.isBackgroundOff() && isOwner() && mController != null) mController.pause();
+        if (isOwner() && Setting.isBackgroundOff() && mController != null) mController.pause();
     }
 
     @Override

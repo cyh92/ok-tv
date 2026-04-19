@@ -3,12 +3,11 @@
 .gradle
 .github
 .settings
-*.jks
-lib-*.aar
 *build
-/media*
+*.jks
+*.properties
+lib-*.aar
 /Release
-/local.properties
 app/leanback
 app/leanbackArm64_v8a
 app/leanbackArmeabi_v7a

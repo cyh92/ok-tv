@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -954,12 +953,10 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void onPaused() {
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         controller().pause();
     }
 
     private void onPlay() {
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         controller().play();
     }
 
@@ -1045,8 +1042,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     public void onSeekEnd(long time) {
         if (player().isLive()) return;
         controller().seekTo(player().getPosition() + time);
-        showProgress();
-        onPlay();
+        controller().play();
     }
 
     @Override
