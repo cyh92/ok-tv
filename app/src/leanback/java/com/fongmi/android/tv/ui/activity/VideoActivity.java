@@ -481,7 +481,6 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
         mBinding.widget.title.setSelected(true);
         updateHistory(episode);
         showProgress();
-        hideCenter();
     }
 
     private void setPlayer(Result result) {
@@ -825,6 +824,7 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
     private void showProgress() {
         mBinding.progress.getRoot().setVisibility(View.VISIBLE);
         App.post(mR3, 0);
+        hideCenter();
         hideError();
     }
 
@@ -1068,7 +1068,7 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
 
     @Override
     protected void onError(String msg) {
-        Track.delete(player().getUrl());
+        Track.delete(player().getKey());
         mClock.setCallback(null);
         player().resetTrack();
         player().reset();
@@ -1355,10 +1355,8 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
 
     @Override
     public void onSeekEnd(long time) {
-        controller().seekTo(player().getPosition() + time);
-        controller().play();
         mKeyDown.reset();
-        hideCenter();
+        seekTo(time);
     }
 
     @Override

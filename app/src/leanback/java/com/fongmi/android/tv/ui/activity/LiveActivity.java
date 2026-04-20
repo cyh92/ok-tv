@@ -92,6 +92,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     private Observer<Epg> mObserveEpg;
     private LiveViewModel mViewModel;
     private List<Group> mHides;
+    private String mPlaybackKey;
     private Channel mChannel;
     private View mOldView;
     private Group mGroup;
@@ -140,7 +141,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     protected String getPlaybackKey() {
-        return "live";
+        return mPlaybackKey;
     }
 
     @Override
@@ -490,7 +491,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     protected void onError(String msg) {
-        Track.delete(player().getUrl());
+        Track.delete(player().getKey());
         player().resetTrack();
         player().reset();
         player().stop();
@@ -556,6 +557,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     private void showProgress() {
         mBinding.progress.getRoot().setVisibility(View.VISIBLE);
         App.post(mR2, 0);
+        hideCenter();
         hideError();
     }
 
@@ -759,6 +761,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void start(Result result) {
+        mPlaybackKey = result.getRealUrl();
         mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
         if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
@@ -769,7 +772,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
             webPlayer.setVisibility(View.GONE);
             mBinding.exo.setVisibility(View.VISIBLE);
 
-            startPlayer(getPlaybackKey(), result, false, getHome().getTimeout(), buildMetadata());
+            startPlayer(mPlaybackKey, result, false, getHome().getTimeout(), buildMetadata());
         }
     }
 
@@ -1027,10 +1030,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void seek(long time) {
-        controller().seekTo(player().getPosition() + time);
-        controller().play();
         mKeyDown.reset();
-        hideCenter();
+        seekTo(time);
     }
 
     private void onPaused() {

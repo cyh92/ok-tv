@@ -96,6 +96,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private LiveViewModel mViewModel;
     private CustomKeyDown mKeyDown;
     private List<Group> mHides;
+    private String mPlaybackKey;
     private Channel mChannel;
     private Group mGroup;
     private Runnable mR1;
@@ -140,7 +141,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     protected String getPlaybackKey() {
-        return "live";
+        return mPlaybackKey;
     }
 
     @Override
@@ -702,6 +703,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         showProgress();
     }
     private void start(Result result) {
+        mPlaybackKey = result.getRealUrl();
         mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
         if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
@@ -712,7 +714,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
             webPlayer.setVisibility(View.GONE);
             mBinding.exo.setVisibility(View.VISIBLE);
 
-            startPlayer(getPlaybackKey(), result, false, getHome().getTimeout(), buildMetadata());
+            startPlayer(mPlaybackKey, result, false, getHome().getTimeout(), buildMetadata());
         }
     }
 
@@ -840,7 +842,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     protected void onError(String msg) {
-        Track.delete(player().getUrl());
+        Track.delete(player().getKey());
         player().resetTrack();
         player().reset();
         player().stop();
@@ -1135,8 +1137,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     @Override
     public void onSeekEnd(long time) {
         if (player().isLive()) return;
-        controller().seekTo(player().getPosition() + time);
-        controller().play();
+        seekTo(time);
     }
 
     @Override
@@ -1170,7 +1171,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         super.onUserLeaveHint();
         if (isRedirect()) return;
         if (isLock()) App.post(this::onLock, 500);
-        if (player().haveTrack(C.TRACK_TYPE_VIDEO)) mPiP.enter(this, player().getVideoWidth(), player().getVideoHeight(), Setting.getLiveScale());
+        if (service() != null && player().haveTrack(C.TRACK_TYPE_VIDEO)) mPiP.enter(this, player().getVideoWidth(), player().getVideoHeight(), Setting.getLiveScale());
     }
 
     @Override

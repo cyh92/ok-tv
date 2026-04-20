@@ -27,7 +27,6 @@ import com.fongmi.android.tv.dlna.CastAction;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.player.PlayerHelper;
 import com.fongmi.android.tv.player.PlayerManager;
-import com.fongmi.android.tv.player.engine.PlaySpec;
 import com.fongmi.android.tv.service.DLNARendererService;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.base.PlaybackActivity;
@@ -49,6 +48,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     private ActivityCastBinding mBinding;
     private DLNARendererService mRenderer;
     private CustomKeyDownVod mKeyDown;
+    private String mPlaybackKey;
     private CastAction mAction;
     private Runnable mR1;
     private Runnable mR2;
@@ -73,7 +73,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     protected String getPlaybackKey() {
-        return "cast";
+        return mPlaybackKey;
     }
 
     @Override
@@ -164,7 +164,8 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void start() {
-        player().start(new PlaySpec(getPlaybackKey(), mAction.getCurrentURI(), mAction.getHeaders(), buildMetadata()), Constant.TIMEOUT_PLAY);
+        mPlaybackKey = mAction.getCurrentURI();
+        startPlayer(mPlaybackKey, mAction.result(), false, Constant.TIMEOUT_PLAY, buildMetadata());
     }
 
     private void setDecode() {
@@ -230,6 +231,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     private void showProgress() {
         mBinding.progress.getRoot().setVisibility(View.VISIBLE);
         App.post(mR2, 0);
+        hideCenter();
         hideError();
     }
 
@@ -434,10 +436,8 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     @Override
     public void onSeekEnd(long time) {
         if (player().isEmpty()) return;
-        controller().seekTo(player().getPosition() + time);
-        controller().play();
         mKeyDown.reset();
-        hideCenter();
+        seekTo(time);
     }
 
     @Override

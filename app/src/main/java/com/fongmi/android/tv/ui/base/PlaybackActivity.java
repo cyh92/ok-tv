@@ -21,9 +21,9 @@ import androidx.media3.ui.PlayerView;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.bean.Result;
-import com.fongmi.android.tv.player.PlayerHelper;
 import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.player.engine.PlaySpec;
+import com.fongmi.android.tv.player.exo.ExoUtil;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.custom.CustomSeekView;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -87,29 +87,27 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     protected abstract PlaybackService.NavigationCallback getNavigationCallback();
 
-    protected abstract PlayerView getExoView();
-
     protected abstract CustomSeekView getSeekView();
 
-    protected String getPlaybackKey() {
-        return null;
-    }
+    protected abstract PlayerView getExoView();
+
+    protected abstract String getPlaybackKey();
 
     protected boolean isOwner() {
         String key = getPlaybackKey();
-        return key == null || (mService != null && key.equals(mService.player().getKey()));
+        return key == null || (mService != null && key.equals(player().getKey()));
     }
 
     protected boolean isIdle() {
-        return controller().getPlaybackState() == Player.STATE_IDLE;
+        return mController.getPlaybackState() == Player.STATE_IDLE;
     }
 
     protected boolean isEnded() {
-        return controller().getPlaybackState() == Player.STATE_ENDED;
+        return mController.getPlaybackState() == Player.STATE_ENDED;
     }
 
     protected boolean isBuffering() {
-        return controller().getPlaybackState() == Player.STATE_BUFFERING;
+        return mController.getPlaybackState() == Player.STATE_BUFFERING;
     }
 
     protected boolean isPaused() {
@@ -143,16 +141,21 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     protected void onReclaim() {
     }
 
+    protected void seekTo(long time) {
+        mController.seekTo(player().getPosition() + time);
+        mController.play();
+    }
+
     protected void startPlayer(String key, Result result, boolean useParse, long timeout, MediaMetadata metadata) {
         if (result.getDrm() != null && !FrameworkMediaDrm.isCryptoSchemeSupported(result.getDrm().getUUID())) {
             onError(ResUtil.getString(R.string.error_play_drm));
         } else if (result.hasMsg()) {
             onError(result.getMsg());
-        } else if (result.getParse() == 1 || result.getJx() == 1) {
-            player().startParse(key, result, useParse, metadata);
-        } else if (PlayerManager.isIllegal(result.getRealUrl())) {
-            onError(ResUtil.getString(R.string.error_play_url));
+        } else if (result.needParse() || useParse) {
+            attachSurface();
+            player().parse(key, result, useParse, metadata);
         } else {
+            attachSurface();
             player().start(PlaySpec.from(result, key, metadata), timeout);
         }
     }
@@ -173,17 +176,10 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     private void onControllerConnected() {
         try {
             mController = mControllerFuture.get();
-            if (mController == null) return;
+            getSeekView().setPlayer(mController);
             mController.addListener(this);
-            initPlayerViews();
         } catch (Exception ignored) {
         }
-    }
-
-    private void initPlayerViews() {
-        PlayerHelper.setSubtitleView(getExoView());
-        getSeekView().setPlayer(mController);
-        setRender();
     }
 
     private PendingIntent buildSessionIntent() {
@@ -204,7 +200,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     private void attachSurface() {
-        getExoView().setPlayer(mController);
+        if (mService != null && getExoView().getPlayer() == null) getExoView().setPlayer(player().getPlayer());
     }
 
     private void detachSurface() {
@@ -213,6 +209,8 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     private void setRender() {
         getExoView().setRender(Setting.getRender());
+        detachSurface();
+        attachSurface();
     }
 
     private void releasePlaybackService() {
@@ -232,7 +230,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     private void detach() {
-        if (isOwner()) detachSurface();
         releaseController();
         releaseBinding();
     }
@@ -276,15 +273,14 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
         @Override
         public void onPlayerRebuild(Player player) {
-            if (!isOwner()) return;
-            detachSurface();
-            setRender();
+            if (isOwner()) setRender();
         }
     };
 
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
+        ExoUtil.setPlayerView(getExoView());
         bindPlaybackService();
     }
 
@@ -298,14 +294,12 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     @Override
     public void onPlaybackStateChanged(int state) {
-        if (!isOwner()) return;
-        if (state == Player.STATE_READY && getExoView().getPlayer() == null) attachSurface();
-        onStateChanged(state);
+        if (isOwner()) onStateChanged(state);
     }
 
     @Override
     public void onVideoSizeChanged(@NonNull VideoSize size) {
-        onSizeChanged(size);
+        if (isOwner()) onSizeChanged(size);
     }
 
     @Override
@@ -330,8 +324,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         if (shouldReclaim()) {
             detachSurface();
             onReclaim();
-        } else {
-            attachSurface();
         }
     }
 
@@ -344,7 +336,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     @Override
     protected void onStop() {
         super.onStop();
-        if (isOwner()) detachSurface();
         if (isOwner() && Setting.isBackgroundOff() && mController != null) mController.pause();
     }
 
