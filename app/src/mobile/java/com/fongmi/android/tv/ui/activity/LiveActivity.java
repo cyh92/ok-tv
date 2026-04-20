@@ -56,6 +56,7 @@ import com.fongmi.android.tv.ui.adapter.GroupAdapter;
 import com.fongmi.android.tv.ui.base.PlaybackActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDown;
 import com.fongmi.android.tv.ui.custom.CustomSeekView;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.CastDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.InfoDialog;
@@ -70,10 +71,16 @@ import com.fongmi.android.tv.utils.PiP;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
 import com.fongmi.android.tv.utils.Util;
+import com.orhanobut.logger.Logger;
+import com.tencent.smtt.sdk.WebView;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -97,6 +104,8 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private boolean rotate;
     private int count;
     private PiP mPiP;
+
+    private WebViewPlayer webPlayer;
 
     public static void start(Context context) {
         context.startActivity(new Intent(context, LiveActivity.class).putExtra("empty", LiveConfig.isEmpty()));
@@ -160,6 +169,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
+        webPlayer = new WebViewPlayer(this);//初始化webview
         mKeyDown = CustomKeyDown.create(this, mBinding.exo);
         setPadding(mBinding.control.getRoot());
         setPadding(mBinding.recycler, true);
@@ -215,6 +225,9 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void setVideoView() {
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
+
         setScale(Setting.getLiveScale());
         mBinding.control.action.invert.setActivated(Setting.isInvert());
         mBinding.control.action.across.setActivated(Setting.isAcross());
@@ -688,9 +701,89 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         player().stop();
         showProgress();
     }
-
     private void start(Result result) {
-        startPlayer(getPlaybackKey(), result, false, getHome().getTimeout(), buildMetadata());
+        mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
+        if (result.getParse() == 2) {
+            Logger.t("LiveActivity").d("切换到WebView模式");
+            showWebView(result);
+        } else {
+            Logger.t("LiveActivity").d("切换到标准播放器模式");
+            webPlayer.stop();
+            webPlayer.setVisibility(View.GONE);
+            mBinding.exo.setVisibility(View.VISIBLE);
+
+            startPlayer(getPlaybackKey(), result, false, getHome().getTimeout(), buildMetadata());
+        }
+    }
+
+    // 显示WebView并加载URL
+    private void showWebView(Result result) {
+        try {
+            Logger.t("LiveActivity").d("初始化WebView播放器");
+            webPlayer.stop();
+            mBinding.exo.setVisibility(View.GONE);
+            webPlayer.setVisibility(View.VISIBLE);
+            // webPlayer现在在最底层，不需要bringToFront
+
+            // 检查WebViewPlayer的触摸透明状态
+            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
+            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
+
+            // 设置回调监听
+            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
+                @Override
+                public void onPageStarted() {
+                    showProgress();
+                }
+
+                private boolean isScriptInjected = false;
+
+                @Override
+                public void onPageFinished(WebView webView) {
+                    Logger.t("WebView").e("页面加载完成");
+
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
+                    hideProgress();
+                }
+
+                @Override
+                public void onPageLoadProgress(int progress) {
+                    if (progress > 99) {
+                        hideProgress();
+                    }
+                }
+            });
+            webPlayer.start(result);
+
+
+        } catch (Exception e) {
+            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+        }
+    }
+
+    //注入js
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
+        }
     }
 
     private void checkControl() {
@@ -878,6 +971,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         mBinding.control.action.audio.setVisibility(player().haveTrack(C.TRACK_TYPE_AUDIO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.video.setVisibility(player().haveTrack(C.TRACK_TYPE_VIDEO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.speed.setVisibility(player().isVod() ? View.VISIBLE : View.GONE);
+        mBinding.control.seek.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏进度条
     }
 
     private MediaMetadata buildMetadata() {
@@ -1019,14 +1113,14 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     public void onFlingUp() {
-        if (Setting.isInvert()) nextChannel();
-        else prevChannel();
+        if (Setting.isInvert()) prevChannel();
+        else nextChannel();
     }
 
     @Override
     public void onFlingDown() {
-        if (Setting.isInvert()) prevChannel();
-        else nextChannel();
+        if (Setting.isInvert()) nextChannel();
+        else prevChannel();
     }
 
     @Override
