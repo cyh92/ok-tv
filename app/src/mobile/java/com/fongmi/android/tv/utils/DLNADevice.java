@@ -1,14 +1,14 @@
 package com.fongmi.android.tv.utils;
 
-import com.android.cast.dlna.dmc.DLNACastManager;
 import com.fongmi.android.tv.bean.Device;
 
+import org.jupnp.model.meta.RemoteDevice;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class DLNADevice {
 
-    private final Set<org.fourthline.cling.model.meta.Device<?, ?, ?>> devices;
+    private final Set<RemoteDevice> devices;
 
     private static class Loader {
         static final DLNADevice INSTANCE = new DLNADevice();
@@ -22,22 +22,28 @@ public class DLNADevice {
         this.devices = new LinkedHashSet<>();
     }
 
-    public Device add(org.fourthline.cling.model.meta.Device<?, ?, ?> item) {
+    // 添加设备
+    public Device add(RemoteDevice item) {
         devices.add(item);
         return Device.get(item);
     }
 
-    public Device remove(org.fourthline.cling.model.meta.Device<?, ?, ?> item) {
+    // 移除设备
+    public Device remove(RemoteDevice item) {
         devices.remove(item);
         return Device.get(item);
     }
 
+    // 断开所有设备（纯 jUPnP，不再使用 DLNACastManager）
     public void disconnect() {
-        devices.forEach(DLNACastManager.INSTANCE::disconnectDevice);
         devices.clear();
     }
 
-    public org.fourthline.cling.model.meta.Device<?, ?, ?> find(Device item) {
-        return devices.stream().filter(d -> d.getIdentity().getUdn().getIdentifierString().equals(item.getUuid())).findFirst().orElse(null);
+    // 查找设备
+    public RemoteDevice find(Device item) {
+        return devices.stream()
+                .filter(d -> d.getIdentity().getUdn().getIdentifierString().equals(item.getUuid()))
+                .findFirst()
+                .orElse(null);
     }
 }
