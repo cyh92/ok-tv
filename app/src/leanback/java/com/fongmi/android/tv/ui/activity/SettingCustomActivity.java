@@ -15,6 +15,7 @@ import com.fongmi.android.tv.databinding.ActivitySettingCustomBinding;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.X5WebViewCallback;
 import com.fongmi.android.tv.ui.base.BaseActivity;
+import com.fongmi.android.tv.ui.dialog.TbsDebugDialog;
 import com.fongmi.android.tv.ui.dialog.X5WebViewDialog;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -84,7 +85,7 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
             int i= index == parseWebview.length - 1 ? 0 : ++index;
             Setting.putParseWebView(i);
             mBinding.parseWebviewText.setText(parseWebview[i]);
-            if (index == 1 && QbSdk.getTbsVersion(App.get()) <= 0) X5WebViewDialog.create(this).show();
+            if (index == 1 && QbSdk.getTbsVersion(App.get()) <= 0) TbsDebugDialog.create(this).show();//X5WebViewDialog.create(this).show();
         }
     }
 
