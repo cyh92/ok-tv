@@ -539,9 +539,15 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             setHistoryDelete(false);
         } else if (mBinding.recycler.getSelectedPosition() != 0) {
             mBinding.recycler.scrollToPosition(0);
+        } else if (PlaybackService.isRunning()) {
+            moveTaskToBack(true);
         } else {
-            if (PlaybackService.isRunning()) moveTaskToBack(true);
-            else super.onBackInvoked();
+            if (System.currentTimeMillis() - mExitTime < 2000) {
+                super.onBackInvoked();
+            } else {
+                mExitTime = System.currentTimeMillis();
+                Notify.show("再按一次返回键退出应用");
+            }
         }
     }
 

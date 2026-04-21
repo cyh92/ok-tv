@@ -1153,9 +1153,14 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
             hideInfo();
         } else if (isVisible(mBinding.recycler)) {
             hideUI();
+        } else if (isTaskRoot()) {
+            if (System.currentTimeMillis() - mExitTime < 2000) {
+                super.onBackInvoked();
+            } else {
+                mExitTime = System.currentTimeMillis();
+                Notify.show("再按一次返回键退出直播");
+            }
         } else {
-            if (isTaskRoot())
-                startActivity(new Intent(this, HomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
             super.onBackInvoked();
         }
     }
