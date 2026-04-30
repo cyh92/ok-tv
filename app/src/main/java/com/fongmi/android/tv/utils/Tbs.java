@@ -5,9 +5,9 @@ import android.os.Environment;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.impl.X5WebViewCallback;
 import com.fongmi.android.tv.server.Server;
+import com.fongmi.android.tv.setting.Setting;
 import com.github.catvod.utils.Path;
 import com.orhanobut.logger.Logger;
 import com.tencent.smtt.sdk.QbSdk;

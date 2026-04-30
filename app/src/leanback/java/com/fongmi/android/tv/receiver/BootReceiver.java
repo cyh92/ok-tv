@@ -10,9 +10,9 @@ import android.os.Build;
 import androidx.annotation.NonNull;
 
 import com.fongmi.android.tv.App;
-import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.service.BootStartService;
+import com.fongmi.android.tv.setting.Setting;
 
 public class BootReceiver extends BroadcastReceiver {
 

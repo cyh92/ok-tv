@@ -11,12 +11,12 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.VideoSize;
+import androidx.media3.ui.danmaku.DanmakuConfig;
 import androidx.media3.ui.danmaku.DanmakuController;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.bean.Danmaku;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Sub;
@@ -25,6 +25,8 @@ import com.fongmi.android.tv.impl.ParseCallback;
 import com.fongmi.android.tv.player.engine.ExoPlayerEngine;
 import com.fongmi.android.tv.player.engine.PlaySpec;
 import com.fongmi.android.tv.player.engine.PlayerEngine;
+import com.fongmi.android.tv.setting.DanmakuSetting;
+import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
@@ -221,10 +223,19 @@ public class PlayerManager implements ParseCallback {
     public void setDanmakuController(DanmakuController controller) {
         danmakuController = controller;
         danmakuController.setOkHttpClient(OkHttp.player());
+        danmakuController.setConfig(DanmakuSetting.getConfig());
+    }
+
+    public void setDanmakuConfig(DanmakuConfig config) {
+        danmakuController.setConfig(config);
     }
 
     public void setDanmakuEnabled(boolean enabled) {
-        if (danmakuController != null) danmakuController.setEnabled(enabled);
+        danmakuController.setEnabled(enabled);
+    }
+
+    public void sendDanmaku(String text) {
+        danmakuController.sendNow(text);
     }
 
     public String setSpeed(float speed) {
@@ -249,7 +260,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public String toggleSpeed() {
-        return setSpeed(getSpeed() == 1 ? Setting.getSpeed() : 1);
+        return setSpeed(getSpeed() == 1 ? PlayerSetting.getSpeed() : 1);
     }
 
     public void setTrack(List<Track> tracks) {
@@ -407,7 +418,10 @@ public class PlayerManager implements ParseCallback {
         @Override
         public void onPlayerError(@NonNull PlaybackException e) {
             PlayerEngine.ErrorAction action = engine.handleError(e);
-            if (action == PlayerEngine.ErrorAction.RECOVERED) return;
+            if (action == PlayerEngine.ErrorAction.RECOVERED) {
+                setDanmakus(spec.getDanmakus());
+                return;
+            }
             if (++retry > 2) {
                 callback.onError(engine.getErrorMessage(e));
                 return;
