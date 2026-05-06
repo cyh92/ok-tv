@@ -60,7 +60,6 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void release() {
-        stopParse();
         App.removeCallbacks(runnable);
         if (engine == null) return;
         player.removeListener(listener);
@@ -91,6 +90,10 @@ public class PlayerManager implements ParseCallback {
 
     public boolean isPlaying() {
         return player.isPlaying();
+    }
+
+    public boolean isReleased() {
+        return player == null;
     }
 
     public String getUrl() {
@@ -361,6 +364,11 @@ public class PlayerManager implements ParseCallback {
         if (spec != null) spec.setDanmaku(item);
         if (item.isEmpty()) danmakuController.clearItems();
         else danmakuController.setDataSource(Uri.parse(item.getRealUrl()));
+    }
+
+    public void addDanmaku(Danmaku item) {
+        if (danmakuController == null || item.isEmpty()) return;
+        if (spec != null) spec.addDanmaku(item);
     }
 
     @Override

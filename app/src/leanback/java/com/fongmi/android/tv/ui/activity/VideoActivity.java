@@ -32,6 +32,7 @@ import com.bumptech.glide.request.transition.Transition;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.api.DanmakuApi;
 import com.fongmi.android.tv.api.SiteApi;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Danmaku;
@@ -494,6 +495,10 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
         if (result.hasPosition()) mHistory.setPosition(result.getPosition());
         mBinding.control.parse.setVisibility(isUseParse() ? View.VISIBLE : View.GONE);
         startPlayer(getHistoryKey(), result, isUseParse(), getSite().getTimeout(), buildMetadata());
+        if (DanmakuApi.canSearch()) DanmakuApi.search(mHistory.getVodName(), getEpisode().getName(), danmaku -> {
+            if (DanmakuSetting.isSpiderFirst() && !result.getDanmaku().isEmpty()) player().addDanmaku(danmaku);
+            else player().setDanmaku(danmaku);
+        });
     }
 
     @Override
@@ -1113,7 +1118,7 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
     @Override
     public void onSubtitleClick() {
         SubtitleDialog.create().view(mBinding.exo.getSubtitleView()).show(this);
-        hideControl();
+        App.post(this::hideControl, 100);
     }
 
     @Override
@@ -1439,6 +1444,7 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
     protected void onDestroy() {
         mClock.release();
         saveHistory(true);
+        DanmakuApi.cancel();
         RefreshEvent.keep();
         App.removeCallbacks(mR1, mR2, mR3, mR4);
         mViewModel.getResult().removeObserver(mObserveDetail);

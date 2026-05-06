@@ -4,5 +4,6 @@
     <color name="primaryDark">@color/blue_700</color>
     <color name="accent">@color/blue_500</color>
     <color name="indicator">@color/white_80</color>
+    <color name="text_highlight">@color/white_30</color>
 
 </resources>

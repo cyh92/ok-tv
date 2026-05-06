@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:padding="16dp">
+    android:padding="24dp">
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/code"
@@ -23,7 +23,7 @@
         android:maxLines="3"
         android:paddingStart="4dp"
         android:paddingEnd="4dp"
-        android:textColor="@color/grey_700"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp"
         tools:text="@string/push_info" />
 
@@ -62,13 +62,13 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:layout_weight="1"
-            android:background="@drawable/selector_text"
+            android:background="@drawable/selector_chip_round"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:gravity="center"
             android:singleLine="true"
             android:text="@string/setting_choose"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="14sp" />
 
         <com.google.android.material.textview.MaterialTextView
@@ -77,13 +77,13 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:layout_weight="1"
-            android:background="@drawable/selector_text"
+            android:background="@drawable/selector_chip_round"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:gravity="center"
             android:singleLine="true"
             android:text="@string/dialog_positive"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="14sp" />
 
         <com.google.android.material.textview.MaterialTextView
@@ -91,13 +91,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@drawable/selector_text"
+            android:background="@drawable/selector_chip_round"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:gravity="center"
             android:singleLine="true"
             android:text="@string/dialog_negative"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="14sp" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>

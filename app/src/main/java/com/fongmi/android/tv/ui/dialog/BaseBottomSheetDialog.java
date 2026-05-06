@@ -60,6 +60,7 @@ public abstract class BaseBottomSheetDialog extends BottomSheetDialogFragment {
         dialog.setOnShowListener(d -> setBehavior(dialog));
         Window window = dialog.getWindow();
         if (window == null) return dialog;
+        window.setDimAmount(0);
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         if (Util.isFullscreen(getActivity())) window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         return dialog;

@@ -20,7 +20,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="@color/white"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp"
         tools:text="點播" />
 

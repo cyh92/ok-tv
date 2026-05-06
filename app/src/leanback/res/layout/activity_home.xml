@@ -35,14 +35,14 @@
             android:focusable="false"
             android:singleLine="true"
             android:text="@string/app_name"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="24sp" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/clock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="24sp"
             tools:text="09:20:00" />
 

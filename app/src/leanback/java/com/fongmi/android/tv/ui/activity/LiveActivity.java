@@ -861,7 +861,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     @Override
     public void onSubtitleClick() {
         SubtitleDialog.create().view(mBinding.exo.getSubtitleView()).show(this);
-        hideControl();
+        App.post(this::hideControl, 100);
     }
 
     @Override

@@ -1,7 +1,10 @@
 package com.fongmi.android.tv.setting;
 
+import android.text.TextUtils;
+
 import androidx.media3.ui.danmaku.DanmakuConfig;
 
+import com.fongmi.android.tv.api.config.VodConfig;
 import com.github.catvod.utils.Prefers;
 
 public class DanmakuSetting {
@@ -12,6 +15,30 @@ public class DanmakuSetting {
 
     public static void putLoad(boolean danmakuLoad) {
         Prefers.put("danmaku_load", danmakuLoad);
+    }
+
+    public static boolean isAuto() {
+        return Prefers.getBoolean("danmaku_auto");
+    }
+
+    public static void putAuto(boolean auto) {
+        Prefers.put("danmaku_auto", auto);
+    }
+
+    public static boolean isSpiderFirst() {
+        return Prefers.getBoolean("danmaku_spider_first");
+    }
+
+    public static void putSpiderFirst(boolean spiderFirst) {
+        Prefers.put("danmaku_spider_first", spiderFirst);
+    }
+
+    public static String getApiUrl() {
+        return Prefers.getString("danmaku_api_url", "");
+    }
+
+    public static void putApiUrl(String url) {
+        Prefers.put("danmaku_api_url", url);
     }
 
     public static boolean isShow() {
@@ -135,7 +162,7 @@ public class DanmakuSetting {
     }
 
     public static float getScrollAreaRatio() {
-        return Prefers.getFloat("danmaku_scroll_area_ratio", 0.75f);
+        return Prefers.getFloat("danmaku_scroll_area_ratio", 0.5f);
     }
 
     public static void putScrollAreaRatio(float value) {
@@ -172,6 +199,14 @@ public class DanmakuSetting {
 
     public static void putLineSpacing(float value) {
         Prefers.put("danmaku_line_spacing", value);
+    }
+
+    public static float getScrollGapRatio() {
+        return Prefers.getFloat("danmaku_scroll_gap_ratio", 0f);
+    }
+
+    public static void putScrollGapRatio(float value) {
+        Prefers.put("danmaku_scroll_gap_ratio", value);
     }
 
     public static boolean isShowScroll() {
@@ -230,7 +265,13 @@ public class DanmakuSetting {
         Prefers.put("danmaku_show_special", value);
     }
 
-    public static void reset() {
+    public static String getEffectiveApiUrl() {
+        String userUrl = getApiUrl();
+        if (!TextUtils.isEmpty(userUrl)) return userUrl;
+        return VodConfig.get().getConfig().getDanmaku();
+    }
+
+    public static void resetAppearance() {
         DanmakuConfig config = DanmakuConfig.DEFAULT;
         putTextScale(config.textScale);
         putTransparency(config.transparency);
@@ -242,15 +283,28 @@ public class DanmakuSetting {
         putProjectionOffsetY(config.projectionOffsetYMultiplier);
         putProjectionTransparency(config.projectionTransparency);
         putColorMode(config.colorMode);
+    }
+
+    public static void resetTiming() {
+        DanmakuConfig config = DanmakuConfig.DEFAULT;
         putDurationMs(config.durationMs);
         putFixedDurationMs(config.fixedDurationMs);
         putTimeOffsetMs(config.timeOffsetMs);
+    }
+
+    public static void resetDensity() {
+        DanmakuConfig config = DanmakuConfig.DEFAULT;
         putMaxOnScreen(config.maxOnScreen);
         putScrollAreaRatio(config.scrollAreaRatio);
+        putScrollGapRatio(config.scrollGapRatio);
+        putLineSpacing(config.lineSpacing);
         putMaxScrollLines(config.maxScrollLines);
         putMaxTopLines(config.maxTopLines);
         putMaxBottomLines(config.maxBottomLines);
-        putLineSpacing(config.lineSpacing);
+    }
+
+    public static void resetDisplay() {
+        DanmakuConfig config = DanmakuConfig.DEFAULT;
         putShowScroll(config.showScroll);
         putShowTop(config.showTop);
         putShowBottom(config.showBottom);
@@ -277,10 +331,11 @@ public class DanmakuSetting {
                 .setTimeOffsetMs(getTimeOffsetMs())
                 .setMaxOnScreen(getMaxOnScreen())
                 .setScrollAreaRatio(getScrollAreaRatio())
+                .setScrollGapRatio(getScrollGapRatio())
+                .setLineSpacing(getLineSpacing())
                 .setMaxScrollLines(getMaxScrollLines())
                 .setMaxTopLines(getMaxTopLines())
                 .setMaxBottomLines(getMaxBottomLines())
-                .setLineSpacing(getLineSpacing())
                 .setShowScroll(isShowScroll())
                 .setShowTop(isShowTop())
                 .setShowBottom(isShowBottom())
