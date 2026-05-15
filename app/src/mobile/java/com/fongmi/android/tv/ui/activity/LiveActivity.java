@@ -1116,13 +1116,13 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     public void onFlingUp() {
-        if (Setting.isInvert()) prevChannel();
+        if (LiveSetting.isInvert()) prevChannel();
         else nextChannel();
     }
 
     @Override
     public void onFlingDown() {
-        if (Setting.isInvert()) nextChannel();
+        if (LiveSetting.isInvert()) nextChannel();
         else prevChannel();
     }
 
