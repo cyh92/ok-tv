@@ -76,12 +76,12 @@ public class HistoryActivity extends BaseActivity implements HistoryPresenter.On
 
     private void onDelete(View view) {
         if (mPresenter.isDelete()) {
-         new MaterialAlertDialogBuilder(this).setTitle(R.string.dialog_delete_record).setMessage(R.string.dialog_delete_history).setNegativeButton(R.string.dialog_negative, null).setBackground(ContextCompat.getDrawable(this,R.drawable.selector_button)).setPositiveButton(R.string.dialog_positive, (dialog, which) -> {
+         new MaterialAlertDialogBuilder(this).setTitle(R.string.dialog_delete_record).setMessage(R.string.dialog_delete_history).setNegativeButton(R.string.dialog_negative, null).setBackground(ContextCompat.getDrawable(this,R.drawable.shape_controller)).setPositiveButton(R.string.dialog_positive, (dialog, which) -> {
                 History.delete(VodConfig.getCid());
                 mHistoryAdapter.clear();
                 mPresenter.setDelete(false);
                 mBinding.delete.setVisibility(View.GONE);
-            }).setBackground(ContextCompat.getDrawable(this,R.drawable.selector_button)).show();
+            }).setBackground(ContextCompat.getDrawable(this,R.drawable.shape_controller)).show();
 
         } else if (mHistoryAdapter.size() > 0) {
             mPresenter.setDelete(true);
