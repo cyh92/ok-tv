@@ -19,7 +19,6 @@ import com.github.catvod.bean.Header;
 import com.github.catvod.bean.Proxy;
 import com.github.catvod.utils.Json;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -122,7 +121,7 @@ public class VodConfig extends BaseConfig {
     @Override
     protected void load(Config config) throws Throwable {
         String json = Decoder.getJson(UrlUtil.convert(config.getUrl()), TAG);
-        checkJson(config, JsonParser.parseString(json).getAsJsonObject());
+        checkJson(config, Json.parse(json).getAsJsonObject());
     }
 
     @Override
@@ -295,18 +294,18 @@ public class VodConfig extends BaseConfig {
 
     private void setParse(Config config, Parse parse, boolean save) {
         this.parse = parse;
-        this.parse.setActivated(true);
+        this.parse.setSelected(true);
         config.setParse(parse.getName());
-        getParses().forEach(item -> item.setActivated(parse));
+        getParses().forEach(item -> item.setSelected(parse));
         if (save) config.save();
     }
 
     private void setHome(Config config, Site site, boolean save) {
         home = site;
-        home.setActivated(true);
+        home.setSelected(true);
         config.setHome(home.getKey());
         if (save) config.save();
-        getSites().forEach(item -> item.setActivated(home));
+        getSites().forEach(item -> item.setSelected(home));
     }
 
     private static class Loader {

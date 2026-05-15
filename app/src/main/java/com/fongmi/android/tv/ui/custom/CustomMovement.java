@@ -33,7 +33,7 @@ public class CustomMovement extends ScrollingMovementMethod {
         CharSequence text = view.getText();
         boolean hasLinks = text instanceof Spannable && ((Spannable) text).getSpans(0, text.length(), ClickableSpan.class).length > 0;
         view.setMovementMethod(hasLinks ? CustomMovement.getInstance() : null);
-        if (hasLinks) view.setHighlightColor(ResUtil.getColor(R.color.text_highlight));
+        if (hasLinks) view.setHighlightColor(ResUtil.getColor(R.color.white_30));
     }
 
     @Override

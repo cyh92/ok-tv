@@ -11,12 +11,12 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.FragmentSettingDanmakuBinding;
-import com.fongmi.android.tv.impl.DanmakuCallback;
+import com.fongmi.android.tv.impl.DanmakuListener;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.DanmakuApiDialog;
 
-public class SettingDanmakuFragment extends BaseFragment implements DanmakuCallback {
+public class SettingDanmakuFragment extends BaseFragment implements DanmakuListener {
 
     private FragmentSettingDanmakuBinding mBinding;
 
@@ -78,7 +78,7 @@ public class SettingDanmakuFragment extends BaseFragment implements DanmakuCallb
     }
 
     private void onDanmakuApi(View view) {
-        DanmakuApiDialog.create(this).show();
+        DanmakuApiDialog.show(this);
     }
 
     @Override

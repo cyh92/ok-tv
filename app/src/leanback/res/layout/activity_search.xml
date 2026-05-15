@@ -46,8 +46,8 @@
                 android:maxLength="255"
                 android:nextFocusDown="@id/keyboard"
                 android:singleLine="true"
-                android:textColor="?attr/colorOnSurface"
-                android:textColorHint="?attr/colorOnSurfaceVariant"
+                android:textColor="@color/white"
+                android:textColorHint="@color/white"
                 android:textCursorDrawable="@drawable/shape_cursor"
                 android:textSize="24sp" />
 
@@ -57,6 +57,8 @@
             android:id="@+id/keyboard"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:layout_marginTop="16dp"
             android:overScrollMode="never"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
@@ -91,7 +93,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="14dp"
                     android:text="@string/search_record"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/white"
                     android:textSize="24sp" />
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -113,7 +115,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
                 android:text="@string/search_hot"
-                android:textColor="?attr/colorOnSurface"
+                android:textColor="@color/white"
                 android:textSize="24sp" />
 
             <androidx.recyclerview.widget.RecyclerView

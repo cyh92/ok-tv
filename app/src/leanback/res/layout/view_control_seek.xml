@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFeatureSettings="tnum"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="@color/white"
         android:textSize="16sp"
         tools:text="00:00:00" />
 
@@ -34,7 +34,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFeatureSettings="tnum"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="@color/white"
         android:textSize="16sp"
         tools:text="00:00:00" />
 

@@ -16,6 +16,14 @@ import java.util.Map;
 
 public class Json {
 
+    public static JsonElement parse(String json) {
+        try {
+            return JsonParser.parseString(json);
+        } catch (Throwable e) {
+            return new JsonParser().parse(json);
+        }
+    }
+
     public static boolean isObj(String text) {
         try {
             if (TextUtils.isEmpty(text)) return false;
@@ -71,7 +79,7 @@ public class Json {
 
     public static JsonObject safeObject(JsonElement element) {
         try {
-            if (element.isJsonPrimitive()) element = JsonParser.parseString(element.getAsJsonPrimitive().getAsString());
+            if (element.isJsonPrimitive()) element = parse(element.getAsJsonPrimitive().getAsString());
             return element.getAsJsonObject();
         } catch (Exception e) {
             return new JsonObject();
@@ -79,7 +87,7 @@ public class Json {
     }
 
     public static Map<String, String> toMap(String json) {
-        return TextUtils.isEmpty(json) ? null : toMap(JsonParser.parseString(json));
+        return TextUtils.isEmpty(json) ? null : toMap(parse(json));
     }
 
     public static Map<String, String> toMap(JsonElement element) {

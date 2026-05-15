@@ -1,26 +1,24 @@
 <resources>
 
     <style name="Theme.Base" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorAccent">@color/white</item>
         <item name="colorPrimary">@color/white</item>
-        <item name="colorPrimaryDark">@color/white</item>
-        <item name="colorOnSurface">@color/white</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
-        <item name="android:windowAnimationStyle">@style/NoAnim</item>D
+        <item name="android:windowAnimationStyle">@style/NoAnim</item>
     </style>
 
     <style name="Theme.Splash" parent="Theme.SplashScreen">
         <item name="postSplashScreenTheme">@style/Theme.App</item>
+        <item name="windowSplashScreenBackground">#141218</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
     </style>
 
     <style name="Theme.App" parent="Theme.Base" />
 
     <style name="Theme.Crash" parent="Theme.Base">
+        <item name="android:windowBackground">@color/grey_800</item>
         <item name="android:windowDisablePreview">true</item>
-        <item name="android:windowBackground">?attr/colorSurface</item>
     </style>
 
     <style name="NoAnim">

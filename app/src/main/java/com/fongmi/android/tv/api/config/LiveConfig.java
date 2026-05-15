@@ -22,7 +22,6 @@ import com.github.catvod.bean.Header;
 import com.github.catvod.bean.Proxy;
 import com.github.catvod.utils.Json;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -116,7 +115,7 @@ public class LiveConfig extends BaseConfig {
     @Override
     protected void load(Config config) throws Throwable {
         String json = Decoder.getJson(UrlUtil.convert(config.getUrl()), TAG);
-        if (Json.isObj(json)) checkJson(config, JsonParser.parseString(json).getAsJsonObject());
+        if (Json.isObj(json)) checkJson(config, Json.parse(json).getAsJsonObject());
         else parseText(config, json);
     }
 
@@ -174,7 +173,7 @@ public class LiveConfig extends BaseConfig {
     }
 
     public void parse(JsonObject object) {
-        parseConfig(getConfig(), object);
+        initLive(getConfig(), object);
     }
 
     private void initList(JsonObject object) {
@@ -271,10 +270,10 @@ public class LiveConfig extends BaseConfig {
 
     private void setHome(Config config, Live live, boolean save) {
         home = live;
-        home.setActivated(true);
+        home.setSelected(true);
         config.setHome(home.getName());
         if (save) config.save();
-        getLives().forEach(item -> item.setActivated(home));
+        getLives().forEach(item -> item.setSelected(home));
         if (!save && (home.isBoot() || LiveSetting.isBoot())) ConfigEvent.boot();
     }
 

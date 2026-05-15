@@ -24,13 +24,13 @@
         android:id="@+id/positive"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/selector_chip_round"
+        android:background="@drawable/selector_button"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:gravity="center"
         android:singleLine="true"
         android:text="@string/dialog_positive"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="@color/white"
         android:textSize="14sp" />
 
 </androidx.appcompat.widget.LinearLayoutCompat>
