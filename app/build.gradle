@@ -13,7 +13,7 @@ android {
     compileSdk libs.versions.compileSdk.get().toInteger()
 
     defaultConfig {
-        applicationId "com.fongmi.android.tv"
+        applicationId "com.fongmi.android.tv.cyh"
         minSdk libs.versions.minSdk.get().toInteger()
         targetSdk libs.versions.targetSdk.get().toInteger()
         versionCode 549
@@ -49,20 +49,20 @@ android {
         viewBinding = true
     }
 
-//    signingConfigs {
-//        release {
-//            storeFile file(localProps['storeFile'])
-//            keyAlias localProps['keyAlias']
-//            keyPassword localProps['storePassword']
-//            storePassword localProps['storePassword']
-//        }
-//    }
+   signingConfigs {
+       release {
+           storeFile file(rootProject.file(localProps['storeFile']))
+           keyAlias localProps['keyAlias']
+           keyPassword localProps['storePassword']
+           storePassword localProps['storePassword']
+       }
+   }
 
     buildTypes {
         release {
             minifyEnabled = true
             shrinkResources = true
-//            signingConfig = signingConfigs.release
+            signingConfig = signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-media.pro'
         }
     }
