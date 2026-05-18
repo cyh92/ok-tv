@@ -8,18 +8,16 @@ import java.util.Map;
 public class API2018K {
 
     private static final String BASE_URL = "https://api.2018k.cn/v3";
-    private static final Map<String, JSONObject> cache = new HashMap<>();
+    private static final String ID = "68D9D8C218894DC68ECDF51C42330869";
+    private static JSONObject cache;
 
-    private static JSONObject request(String ID) {
-        if (cache.containsKey(ID)) {
-            return cache.get(ID);
-        }
+    private static JSONObject getData() {
+        if (cache != null) return cache;
         String url = BASE_URL + "/obtainSoftware?softwareId=" + ID + "&machineCode=123456";
         try {
             String result = OkHttp.string(url);
-            JSONObject json = new JSONObject(result);
-            cache.put(ID, json);
-            return json;
+            cache = new JSONObject(result);
+            return cache;
         } catch (Exception e) {
             e.printStackTrace();
             return new JSONObject();
@@ -27,40 +25,41 @@ public class API2018K {
     }
 
     public static void clearCache() {
-        cache.clear();
+        cache = null;
     }
 
-    public static void clearCache(String ID) {
-        cache.remove(ID);
-    }
-
-    public static boolean GetUpdate(String ID, String Ver) {
-        JSONObject json = request(ID);
-        String versionNumber = json.optString("versionNumber");
+    public static boolean hasUpdate(String Ver) {
+        String versionNumber = getData().optString("versionNumber");
         return compareVersion(versionNumber, Ver) > 0;
     }
 
-    public static String GetUpdateFile(String ID) {
-        return request(ID).optString("downloadLink");
+    public static String getDownloadLink() {
+        String link = getData().optString("downloadLink");
+        if (!link.endsWith("/")) link += "/";
+        return link;
     }
 
-    public static String GetUpdateNotice(String ID) {
-        return request(ID).optString("notice");
+    public static String getApk(String name) {
+        return getDownloadLink() + name + ".apk";
     }
 
-    public static String GetUpdateRem(String ID) {
-        return request(ID).optString("versionInformation");
+    public static String getNotice() {
+        return getData().optString("notice");
     }
 
-    public static String GetUpdateName(String ID) {
-        return request(ID).optString("versionNumber");
+    public static String getVersionInfo() {
+        return getData().optString("versionInformation");
     }
 
-    public static JSONObject GetUpdateJson(String ID) {
-        return request(ID);
+    public static String getVersion() {
+        return getData().optString("versionNumber");
     }
 
-    public static int compareVersion(String v1, String v2) {
+    public static JSONObject getJson() {
+        return getData();
+    }
+
+    private static int compareVersion(String v1, String v2) {
         if (v1 == null || v2 == null) return 0;
         String[] arr1 = v1.split("\\.");
         String[] arr2 = v2.split("\\.");
@@ -73,7 +72,7 @@ public class API2018K {
         return 0;
     }
 
-    public static class UpdateResult {
+    public static class Result {
         public String user;
         public String mandatoryUpdate;
         public String softwareMd5;
@@ -92,8 +91,8 @@ public class API2018K {
         public Object expirationDate;
         public long timeStamp;
 
-        public static UpdateResult fromJson(JSONObject json) {
-            UpdateResult result = new UpdateResult();
+        public static Result from(JSONObject json) {
+            Result result = new Result();
             result.user = json.optString("user");
             result.mandatoryUpdate = json.optString("mandatoryUpdate");
             result.softwareMd5 = json.optString("softwareMd5");
