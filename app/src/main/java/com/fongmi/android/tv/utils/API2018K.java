@@ -1,14 +1,22 @@
 package com.fongmi.android.tv.utils;
 
+import android.util.Base64;
+
 import com.github.catvod.net.OkHttp;
+
 import org.json.JSONObject;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.nio.charset.StandardCharsets;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class API2018K {
 
     private static final String BASE_URL = "https://api.2018k.cn/v3";
     private static final String ID = "68D9D8C218894DC68ECDF51C42330869";
+    private static final String KEY = ""; // TODO: 自定义AES密钥
     private static JSONObject cache;
 
     private static JSONObject getData() {
@@ -16,7 +24,13 @@ public class API2018K {
         String url = BASE_URL + "/obtainSoftware?softwareId=" + ID + "&machineCode=123456";
         try {
             String result = OkHttp.string(url);
-            cache = new JSONObject(result);
+            JSONObject json = new JSONObject(result);
+            String data = json.optString("data");
+            if (!data.isEmpty()) {
+                cache = new JSONObject(decrypt(data));
+            } else {
+                cache = json;
+            }
             return cache;
         } catch (Exception e) {
             e.printStackTrace();
@@ -57,6 +71,18 @@ public class API2018K {
 
     public static JSONObject getJson() {
         return getData();
+    }
+
+    private static String decrypt(String data) throws Exception {
+        byte[] keyBytes = KEY.getBytes(StandardCharsets.UTF_8);
+        byte[] ivBytes = new byte[16];
+        SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
+        IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+        cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+        byte[] decoded = Base64.decode(data, Base64.DEFAULT);
+        byte[] decrypted = cipher.doFinal(decoded);
+        return new String(decrypted, StandardCharsets.UTF_8);
     }
 
     private static int compareVersion(String v1, String v2) {
