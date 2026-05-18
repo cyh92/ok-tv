@@ -13,7 +13,7 @@ android {
     compileSdk libs.versions.compileSdk.get().toInteger()
 
     defaultConfig {
-        applicationId "com.fongmi.android.tv.cyh"
+        applicationId "com.fongmi.android.tv"
         minSdk libs.versions.minSdk.get().toInteger()
         targetSdk libs.versions.targetSdk.get().toInteger()
         versionCode 549
@@ -49,7 +49,7 @@ android {
         viewBinding = true
     }
 
-   signingConfigs {
+  signingConfigs {
        release {
            storeFile file(rootProject.file(localProps['storeFile']))
            keyAlias localProps['keyAlias']

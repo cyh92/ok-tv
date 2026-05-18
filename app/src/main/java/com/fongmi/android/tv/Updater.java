@@ -7,13 +7,12 @@ import androidx.fragment.app.FragmentActivity;
 import com.fongmi.android.tv.impl.UpdateListener;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.dialog.UpdateDialog;
+import com.fongmi.android.tv.utils.API2018K;
 import com.fongmi.android.tv.utils.Download;
 import com.fongmi.android.tv.utils.FileUtil;
-import com.fongmi.android.tv.utils.Github;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Task;
-import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
 
 import org.json.JSONObject;
@@ -37,12 +36,8 @@ public class Updater implements Download.Callback, UpdateListener {
         return Path.cache("update.apk");
     }
 
-    private String getJson() {
-        return Github.getJson(BuildConfig.FLAVOR_mode);
-    }
-
     private String getApk() {
-        return Github.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
+        return API2018K.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
     }
 
     public Updater force() {
@@ -58,11 +53,9 @@ public class Updater implements Download.Callback, UpdateListener {
 
     private void doInBackground(FragmentActivity activity) {
         try {
-            JSONObject object = new JSONObject(OkHttp.string(getJson()));
-            String name = object.optString("name");
-            String desc = object.optString("desc");
-            int code = object.optInt("code");
-            if (code <= BuildConfig.VERSION_CODE) return;
+            if (!API2018K.hasUpdate(BuildConfig.VERSION_NAME)) return;
+            String name = API2018K.getVersion();
+            String desc = API2018K.getVersionInfo();
             App.post(() -> show(activity, name, desc));
         } catch (Exception e) {
             e.printStackTrace();
