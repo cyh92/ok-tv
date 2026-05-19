@@ -12,20 +12,16 @@ import com.fongmi.android.tv.utils.Download;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
-import com.fongmi.android.tv.utils.Task;
 import com.github.catvod.utils.Path;
-
-import org.json.JSONObject;
 
 import java.io.File;
 
 public class Updater implements Download.Callback, UpdateListener {
 
-    private final Download download;
+    private Download download;
     private UpdateDialog dialog;
 
     private Updater() {
-        this.download = Download.create(getApk(), getFile());
     }
 
     public static Updater create() {
@@ -48,18 +44,14 @@ public class Updater implements Download.Callback, UpdateListener {
 
     public void start(FragmentActivity activity) {
         if (!Setting.getUpdate()) return;
-        Task.execute(() -> doInBackground(activity));
+        API2018K.init(json -> check(activity));
     }
 
-    private void doInBackground(FragmentActivity activity) {
-        try {
-            if (!API2018K.hasUpdate(BuildConfig.VERSION_NAME)) return;
-            String name = API2018K.getVersion();
-            String desc = API2018K.getVersionInfo();
-            App.post(() -> show(activity, name, desc));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private void check(FragmentActivity activity) {
+        if (!API2018K.hasUpdate(BuildConfig.VERSION_NAME)) return;
+        String name = API2018K.getVersion();
+        String desc = API2018K.getVersionInfo();
+        App.post(() -> show(activity, name, desc));
     }
 
     private void show(FragmentActivity activity, String version, String desc) {
@@ -70,13 +62,14 @@ public class Updater implements Download.Callback, UpdateListener {
     @Override
     public void onConfirm(View view) {
         view.setEnabled(false);
+        download = Download.create(getApk(), getFile());
         download.start(this);
     }
 
     @Override
     public void onCancel(View view) {
         Setting.putUpdate(false);
-        download.cancel();
+        if (download != null) download.cancel();
         dismiss();
     }
 
