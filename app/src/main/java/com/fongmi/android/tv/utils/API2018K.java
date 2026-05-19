@@ -108,28 +108,39 @@ public class API2018K {
      * 纯原生解密 OpenSSL AES 密文（你的密文专用，无第三方依赖）
      * 解决：Salted__ 开头、无MD5Digest、无BouncyCastle
      */
-    public static String decryptOpenSslNative(String data, String passphrase) throws Exception {
-        byte[] encrypted = Base64.decode(data, Base64.DEFAULT);
+    public static String decryptOpenSslNative(String data, String passphrase) {
+        if (data == null || data.isEmpty() || passphrase == null || passphrase.isEmpty()) {
+            return data != null ? data : "";
+        }
+        try {
+            byte[] encrypted = Base64.decode(data, Base64.DEFAULT);
+            if (encrypted == null || encrypted.length < 16) {
+                return data;
+            }
 
-        // 提取Salt头与盐值
-        byte[] salt = new byte[8];
-        System.arraycopy(encrypted, 8, salt, 0, 8);
-        byte[] cipherBytes = new byte[encrypted.length - 16];
-        System.arraycopy(encrypted, 16, cipherBytes, 0, cipherBytes.length);
+            // 提取Salt头与盐值
+            byte[] salt = new byte[8];
+            System.arraycopy(encrypted, 8, salt, 0, 8);
+            byte[] cipherBytes = new byte[encrypted.length - 16];
+            System.arraycopy(encrypted, 16, cipherBytes, 0, cipherBytes.length);
 
-        // 原生MD5生成 KEY + IV (32+16)
-        byte[] key = new byte[32];
-        byte[] iv = new byte[16];
-        deriveKeyAndIv(passphrase.getBytes(StandardCharsets.UTF_8), salt, key, iv);
+            // 原生MD5生成 KEY + IV (32+16)
+            byte[] key = new byte[32];
+            byte[] iv = new byte[16];
+            deriveKeyAndIv(passphrase.getBytes(StandardCharsets.UTF_8), salt, key, iv);
 
-        // AES-256-CBC 解密
-        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
-        IvParameterSpec ivSpec = new IvParameterSpec(iv);
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+            // AES-256-CBC 解密
+            SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+            IvParameterSpec ivSpec = new IvParameterSpec(iv);
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
 
-        byte[] decrypted = cipher.doFinal(cipherBytes);
-        return new String(decrypted, StandardCharsets.UTF_8);
+            byte[] decrypted = cipher.doFinal(cipherBytes);
+            return new String(decrypted, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return data;
+        }
     }
 
     /**
