@@ -18,6 +18,7 @@ android {
         targetSdk libs.versions.targetSdk.get().toInteger()
         versionCode 549
         versionName "5.4.9"
+        buildConfigField "String", "OPEN_ID", "\"${localProps.getProperty('openid', '')}\""
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]
