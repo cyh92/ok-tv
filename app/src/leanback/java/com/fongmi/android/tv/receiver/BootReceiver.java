@@ -18,6 +18,7 @@ public class BootReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent == null || !isBootAction(intent.getAction())) return;
         registerCallback();
         autoStart(context,intent);
     }
@@ -43,18 +44,19 @@ public class BootReceiver extends BroadcastReceiver {
         }
     }
 
+    private boolean isBootAction(String action) {
+        return Intent.ACTION_BOOT_COMPLETED.equals(action) || "android.intent.action.QUICKBOOT_POWERON".equals(action);
+    }
+
     private void registerCallback() {
         ((ConnectivityManager) App.get().getSystemService(Context.CONNECTIVITY_SERVICE)).registerDefaultNetworkCallback(new Callback());
     }
 
     static class Callback extends ConnectivityManager.NetworkCallback {
 
-        private boolean first;
-
         @Override
         public void onAvailable(@NonNull Network network) {
-            if (first) doJob();
-            else first = true;
+            doJob();
         }
 
         @Override
