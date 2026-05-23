@@ -764,6 +764,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     private void start(Result result) {
         mPlaybackKey = result.getRealUrl();
         mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
+        mBinding.control.action.action.setVisibility(result.getParse() == 2  ? View.GONE : View.VISIBLE);//直播时隐藏
+
         if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
             showWebView(result);
@@ -949,6 +951,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.control.action.video.setVisibility(player().haveTrack(C.TRACK_TYPE_VIDEO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.speed.setVisibility(player().isVod() ? View.VISIBLE : View.GONE);
         mBinding.control.seek.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏进度条
+        mBinding.control.action.action.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏
     }
 
     private MediaMetadata buildMetadata() {
