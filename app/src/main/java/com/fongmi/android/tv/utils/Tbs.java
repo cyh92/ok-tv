@@ -4,6 +4,7 @@ import android.os.Build;
 import android.os.Environment;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.impl.X5WebViewCallback;
 import com.fongmi.android.tv.server.Server;
@@ -71,9 +72,9 @@ public class Tbs {
     public static String url() {
         String downloadUrl = "";
         if (isCpu64Bit()) {
-            downloadUrl = "https://gitee.com/cyh92/live/releases/download/release/046279_arm64v8a_x5.tbs.apk";
+            downloadUrl = "https://gitee.com/api/v5/repos/cyh92/live/releases/624126/attach_files/2685847/download?access_token="+ BuildConfig.GITEE_Token;
         }else{
-            downloadUrl = "https://gitee.com/cyh92/live/releases/download/release/046914_armeabi_x5.tbs.apk";
+            downloadUrl = "https://gitee.com/api/v5/repos/cyh92/live/releases/624126/attach_files/2685844/download?access_token="+ BuildConfig.GITEE_Token;
         }
         return downloadUrl;
     }
