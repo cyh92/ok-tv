@@ -23,7 +23,7 @@ import com.orhanobut.logger.Logger;
 public class WebViewPlayer extends FrameLayout {
 
     private static final String TAG = "WebViewPlayer";
-    public WebView webView;
+    private WebView webView;
     private ProgressBar progressBar;
     private boolean isUserInteractionEnabled = false; // 默认禁用用户交互
     private VideoPlayerCallback callback;
@@ -51,7 +51,7 @@ public class WebViewPlayer extends FrameLayout {
             Logger.t(TAG).e("Invalid result: result or URL is null");
             return;
         }
-        Logger.t(TAG).d("Starting WebView with URL: " + result.getUrl());
+        Logger.t(TAG).d("Starting WebView with URL: " + result.getUrl().v());
         Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
         Logger.t(TAG).d("触摸透明状态: " + isTouchTransparent());
 
@@ -62,10 +62,6 @@ public class WebViewPlayer extends FrameLayout {
                 .alpha(1f)
                 .setDuration(300)
                 .start();
-        // 注入JavaScript禁用用户交互
-        if (!isUserInteractionEnabled) {
-            injectDisableInteractionScript();
-        }
     }
 
     public void stop() {
@@ -82,7 +78,6 @@ public class WebViewPlayer extends FrameLayout {
     private void init(Context context) {
         initWebView(context);
         initProgressBar(context);
-        initTouchInterceptor(context);
         addViewsToLayout();
         
         // 默认禁用交互，设置视图属性
@@ -94,6 +89,8 @@ public class WebViewPlayer extends FrameLayout {
 
     private void initWebView(Context context) {
         webView = new WebView(context);
+        webView.setBackgroundColor(Color.BLACK);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         setupWebViewSettings();
         setDefaultWebClients();
     }
@@ -108,9 +105,8 @@ public class WebViewPlayer extends FrameLayout {
         settings.setLoadWithOverviewMode(true);
         
         // Performance optimizations for live streaming
-        settings.setLoadsImagesAutomatically(false); // 禁用自动加载图片
-        settings.setBlockNetworkImage(true); // 禁用网络图片加载
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE); // 直播不需要缓存
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT); // 页面资源使用缓存加速加载
+        settings.setAppCacheEnabled(true);
         
         // 禁用用户交互功能
         settings.setSupportZoom(false); // 禁用缩放
@@ -171,6 +167,10 @@ public class WebViewPlayer extends FrameLayout {
             @Override
             public void onPageFinished(WebView webView, String url) {
                 super.onPageFinished(webView, url);
+                // 页面加载完成后注入禁用交互脚本，不干扰初始加载
+                if (!isUserInteractionEnabled) {
+                    injectDisableInteractionScript();
+                }
                 if (callback != null) {
                     callback.onPageFinished(webView);
                 }
@@ -200,19 +200,12 @@ public class WebViewPlayer extends FrameLayout {
         progressBar.setProgress(0);
     }
 
-    private void initTouchInterceptor(Context context) {
-        // 简化实现：不再需要额外的触摸拦截器
-        // 直接通过WebViewPlayer的onTouchEvent处理
-    }
-
     private void addViewsToLayout() {
         addView(webView);
         addView(progressBar);
-        // touchInterceptor 不再需要，直接通过onTouchEvent处理
     }
 
     // 简化的触摸事件处理，依赖setClickable控制
-    // 删除复杂的onInterceptTouchEvent和dispatchTouchEvent处理
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
@@ -254,7 +247,6 @@ public class WebViewPlayer extends FrameLayout {
     }
     public void setUserInteractionEnabled(boolean enabled) {
         isUserInteractionEnabled = enabled;
-        // 不再需要touchInterceptor，直接通过WebView设置处理
         if (webView != null) {
             webView.setFocusable(enabled);
             webView.setFocusableInTouchMode(enabled);
