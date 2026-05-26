@@ -1,22 +1,26 @@
 package com.fongmi.android.tv.ui.custom;
 
+import static com.tencent.smtt.sdk.QbSdk.getSettings;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.Uri;
-import android.net.http.SslError;
+//import android.net.http.SslError;
 import android.text.TextUtils;
 import android.view.ViewGroup;
-import android.webkit.CookieManager;
-import android.webkit.SslErrorHandler;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+//import android.webkit.WebSettings;
+//import android.webkit.CookieManager;
+//import android.webkit.SslErrorHandler;
+//import android.webkit.WebResourceRequest;
+//import android.webkit.WebResourceResponse;
+//import android.webkit.WebSettings;
+//import android.webkit.WebView;
+//import android.webkit.WebViewClient;
 
 import androidx.annotation.NonNull;
 
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.api.config.RuleConfig;
@@ -24,11 +28,22 @@ import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.impl.ParseCallback;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.dialog.WebDialog;
+import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.Sniffer;
 import com.github.catvod.crawler.Spider;
 import com.github.catvod.crawler.SpiderDebug;
 import com.github.catvod.utils.Util;
 import com.google.common.net.HttpHeaders;
+
+import com.tencent.smtt.export.external.interfaces.SslError;
+import com.tencent.smtt.export.external.interfaces.SslErrorHandler;
+import com.tencent.smtt.export.external.interfaces.WebResourceRequest;
+import com.tencent.smtt.export.external.interfaces.WebResourceResponse;
+import com.tencent.smtt.sdk.CookieManager;
+import com.tencent.smtt.sdk.QbSdk;
+import com.tencent.smtt.sdk.WebSettings;
+import com.tencent.smtt.sdk.WebView;
+import com.tencent.smtt.sdk.WebViewClient;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
@@ -59,14 +74,23 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     private String url;
 
     public static CustomWebView create(@NonNull Context context) {
+        initTbs();
         return new CustomWebView(context);
     }
 
     private CustomWebView(@NonNull Context context) {
         super(context);
         initSettings();
+        showTbs();
+    }
+    private static void initTbs() {
+        if (Setting.getParseWebView() == 0) QbSdk.forceSysWebView();
+        else QbSdk.unForceSysWebView();
     }
 
+    private void showTbs() {
+        if (this.getIsX5Core())  Notify.show(R.string.x5webview_parsing);
+    }
     @SuppressLint("SetJavaScriptEnabled")
     private void initSettings() {
         timer = () -> stop(true);
@@ -84,7 +108,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
         setting.setUserAgentString(Setting.getUa());
         setting.setMediaPlaybackRequiresUserGesture(false);
         setting.setJavaScriptCanOpenWindowsAutomatically(false);
-        setting.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        setting.setMixedContentMode(2);
         setWebViewClient(webViewClient());
     }
 
