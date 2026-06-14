@@ -78,7 +78,7 @@ public class Source {
         if (extractor != null) result.setParse(0);
         if (extractor instanceof Video) result.setParse(1);
         if (extractor instanceof WebView) result.setParse(2);//WebView模式
-        return extractor == null ? url : extractor.fetch(url);
+        return extractor == null ? url : extractor.fetch(result);
     }
 
     public void stop() {
@@ -92,6 +92,10 @@ public class Source {
     }
 
     public interface Extractor {
+
+        default String fetch(Result result) throws Exception {
+            return fetch(result.getUrl().v());
+        }
 
         String fetch(String url) throws Exception;
 
