@@ -56,7 +56,7 @@ public class Clock {
         try {
             long time = System.currentTimeMillis();
             if (callback != null) callback.onTimeChanged(time);
-            if (view != null) view.setText(format.format(LocalDateTime.now()));
+            if (view != null && view.isAttachedToWindow()) view.setText(format.format(LocalDateTime.now()));
         } catch (Exception ignored) {
         }
     }

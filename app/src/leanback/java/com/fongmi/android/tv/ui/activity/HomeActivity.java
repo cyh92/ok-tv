@@ -258,6 +258,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void showContent() {
+        if (isFinishing() || isDestroyed()) return;
         mBinding.progressLayout.showContent();
         checkAction(getIntent());
         setFocus();
@@ -378,6 +379,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onConfigEvent(ConfigEvent event) {
+        if (isFinishing() || isDestroyed()) return;
         switch (event.type()) {
             case VOD:
                 RefreshEvent.history();
@@ -395,6 +397,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onRefreshEvent(RefreshEvent event) {
+        if (isFinishing() || isDestroyed()) return;
         switch (event.getType()) {
             case HOME:
                 getVideo();
@@ -413,6 +416,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onServerEvent(ServerEvent event) {
+        if (isFinishing() || isDestroyed()) return;
         switch (event.type()) {
             case SEARCH:
                 SearchActivity.start(this, event.text());
