@@ -36,8 +36,8 @@ class TbsDebugDialog {
     private fun initDialog() {
         dialog.window?.apply {
             val params = attributes
-            params.width = (ResUtil.getScreenWidth() * 0.8f).toInt()
-            params.height = (ResUtil.getScreenHeight() * 0.8f).toInt()
+            params.width = (ResUtil.getScreenWidth() * 0.9f).toInt()
+            params.height = (ResUtil.getScreenHeight() * 0.9f).toInt()
             attributes = params
             setDimAmount(0f)
         }

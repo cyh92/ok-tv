@@ -80,37 +80,41 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
         if (Build.VERSION.SDK_INT > 34) {
             Notify.show("Android 版本大于 14，跳过 X5 内核初始化");
             return;
-        }else {
-            int index = Setting.getParseWebView();
-            int i= index == parseWebview.length - 1 ? 0 : ++index;
-            Setting.putParseWebView(i);
-            mBinding.parseWebviewText.setText(parseWebview[i]);
-            if (index == 1 && QbSdk.getTbsVersion(App.get()) <= 0)X5WebViewDialog.create(this).show();
-//            TbsDebugDialog.create(this).show();//
+        }
+        int oldIndex = Setting.getParseWebView();
+        int newIndex = oldIndex == parseWebview.length - 1 ? 0 : oldIndex + 1;
+        Setting.putParseWebView(newIndex);
+        mBinding.parseWebviewText.setText(parseWebview[newIndex]);
+        if (newIndex == 1 && QbSdk.getTbsVersion(App.get()) <= 0) {
+//            TbsDebugDialog.create(this).show();
+            X5WebViewDialog.create(this).show();
         }
     }
 
 
     @Override
     public void onX5Success() {
-        int index = 1;
-        Setting.putParseWebView(index);
-        mBinding.parseWebviewText.setText(parseWebview[index]);
-        App.post(() -> Util.restartApp(this), 500);
+        runOnUiThread(() -> {
+            Setting.putParseWebView(1);
+            mBinding.parseWebviewText.setText(parseWebview[1]);
+            App.post(() -> Util.restartApp(this), 500);
+        });
     }
 
     @Override
     public void onX5Error() {
-        int index = 0;
-        Setting.putParseWebView(index);
-        mBinding.parseWebviewText.setText(parseWebview[index]);
+        runOnUiThread(() -> {
+            Setting.putParseWebView(0);
+            mBinding.parseWebviewText.setText(parseWebview[0]);
+        });
     }
 
     @Override
     public void onX5Cancel() {
-        int index = 0;
-        Setting.putParseWebView(index);
-        mBinding.parseWebviewText.setText(parseWebview[index]);
+        runOnUiThread(() -> {
+            Setting.putParseWebView(0);
+            mBinding.parseWebviewText.setText(parseWebview[0]);
+        });
     }
 
 }
