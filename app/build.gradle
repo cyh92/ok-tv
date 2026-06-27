@@ -46,7 +46,14 @@ android {
         buildConfig true
         viewBinding true
     }
-
+    signingConfigs {
+        release {
+            storeFile file(rootProject.file(localProps['storeFile']))
+            keyAlias localProps['keyAlias']
+            keyPassword localProps['storePassword']
+            storePassword localProps['storePassword']
+        }
+    }
     buildTypes {
         release {
             minifyEnabled true
