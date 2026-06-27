@@ -50,7 +50,7 @@ android {
         viewBinding true
     }
     signingConfigs {
-        official {
+        release {
             storeFile file(rootProject.file(localProps['storeFile']))
             keyAlias localProps['keyAlias']
             keyPassword localProps['storePassword']
@@ -61,7 +61,7 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            signingConfig = signingConfigs.official
+            signingConfig = signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
