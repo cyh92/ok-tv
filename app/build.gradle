@@ -1,7 +1,10 @@
 plugins {
     id 'com.android.application'
 }
-
+def localProps = new Properties()
+rootProject.file('local.properties').withInputStream {
+    localProps.load(it)
+}
 android {
     namespace 'com.fongmi.android.tv'
 
