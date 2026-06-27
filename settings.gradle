@@ -1,9 +1,9 @@
 pluginManagement {
     repositories {
-//        gradlePluginPortal()
-//        mavenCentral()
-//        jcenter()
-//        google()
+        gradlePluginPortal()
+        mavenCentral()
+        jcenter()
+        google()
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/public' }
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
@@ -12,9 +12,9 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-//        mavenCentral()
-//        jcenter()
-//        google()
+        mavenCentral()
+        jcenter()
+        google()
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/public' }
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
