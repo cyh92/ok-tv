@@ -2,22 +2,22 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         mavenCentral()
-        jcenter()
+        //jcenter()
         google()
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/public' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        //maven { url 'https://maven.aliyun.com/repository/google' }
+        //maven { url 'https://maven.aliyun.com/repository/public' }
+        //maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
     }
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
-        jcenter()
+        //jcenter()
         google()
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/public' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        //maven { url 'https://maven.aliyun.com/repository/google' }
+        //maven { url 'https://maven.aliyun.com/repository/public' }
+        //maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         flatDir {
             dirs "$rootDir/app/libs", "$rootDir/quickjs/libs"
         }
