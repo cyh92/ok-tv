@@ -51,7 +51,7 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file(projectDir, localProps['storeFile'])
+            storeFile file(localProps['storeFile'])
             keyAlias localProps['keyAlias']
             keyPassword localProps['storePassword']
             storePassword localProps['storePassword']
