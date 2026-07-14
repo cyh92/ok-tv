@@ -84,7 +84,6 @@ public class App extends Application implements Application.ActivityLifecycleCal
         super.onCreate();
         Notify.createChannel();
         registerActivityLifecycleCallbacks(this);
-        Tbs.init();
     }
 
     @Override
