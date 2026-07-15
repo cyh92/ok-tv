@@ -38,7 +38,7 @@ public class Notify {
     }
 
     public static String getError(int resId, Throwable e) {
-        if (TextUtils.isEmpty(e.getMessage())) return ResUtil.getString(resId);
+        if (e == null || TextUtils.isEmpty(e.getMessage())) return ResUtil.getString(resId);
         return ResUtil.getString(resId) + "\n" + e.getMessage();
     }
 
