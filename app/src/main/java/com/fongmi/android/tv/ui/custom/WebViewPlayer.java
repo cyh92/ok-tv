@@ -12,6 +12,7 @@ import android.view.View.OnTouchListener;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
+import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.bean.Result;
 import com.orhanobut.logger.Logger;
@@ -83,12 +84,18 @@ public class WebViewPlayer extends FrameLayout {
 
     private void init(Context context) {
         int parseType = Setting.getParseWebView();
-        if (parseType == 0) {
-            mKernel = new SystemKernel(context);
-            Logger.t(TAG).d("当前内核：系统 WebView");
-        } else {
+        boolean useX5 = parseType != 0
+                && !"mobile".equals(BuildConfig.FLAVOR_mode)
+                && com.tencent.smtt.sdk.QbSdk.isTbsCoreInited();
+
+        if (useX5) {
             mKernel = new X5Kernel(context);
             Logger.t(TAG).d("当前内核：X5 WebView");
+        } else {
+            mKernel = new SystemKernel(context);
+            Logger.t(TAG).d("当前内核：系统 WebView（parseType=" + parseType
+                    + ", flavor=" + BuildConfig.FLAVOR_mode
+                    + ", tbsInited=" + com.tencent.smtt.sdk.QbSdk.isTbsCoreInited() + "）");
         }
         mWebView = mKernel.getView();
 
@@ -251,10 +258,10 @@ public class WebViewPlayer extends FrameLayout {
             }
         }
 
-        final String script = "javascript:" + mDisableInteractionJs;
+        final String script = mDisableInteractionJs;
 
         mWebView.post(() -> {
-            mKernel.loadUrl(script);
+            mKernel.evaluateJavascript(script);
             Logger.t(TAG).d("已从assets加载并注入禁用交互JS");
         });
     }
@@ -291,7 +298,7 @@ public class WebViewPlayer extends FrameLayout {
         void loadUrl(String url, Map<String, String> headers);
 
         void loadUrl(String url);
-
+        void evaluateJavascript(String script);
         void stopLoading();
 
         void onResume();
@@ -330,7 +337,10 @@ public class WebViewPlayer extends FrameLayout {
         public void loadUrl(String url, Map<String, String> headers) {
             webView.loadUrl(url, headers);
         }
-
+        @Override
+        public void evaluateJavascript(String script) {
+            webView.evaluateJavascript(script, null);
+        }
         @Override
         public void loadUrl(String url) {
             webView.loadUrl(url);
@@ -454,6 +464,15 @@ public class WebViewPlayer extends FrameLayout {
         @Override
         public void loadUrl(String url) {
             webView.loadUrl(url);
+        }
+
+        @Override
+        public void evaluateJavascript(String script) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                webView.evaluateJavascript(script, null);
+            } else {
+                webView.loadUrl("javascript:" + script);
+            }
         }
 
         @Override

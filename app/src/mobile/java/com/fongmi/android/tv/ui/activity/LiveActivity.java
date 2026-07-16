@@ -739,18 +739,18 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
                     showProgress();
                 }
 
-                private boolean isScriptInjected = false;
-
                 @Override
-                public void onPageFinished(WebView webView) {
+                public void onPageFinished(View webView) {
                     Logger.t("WebView").e("页面加载完成");
 
                     if (!isScriptInjected) {
-                        injectPlayerScript(webView);
+//                        injectPlayerScript(webView);
                         isScriptInjected = true;
                     }
                     hideProgress();
                 }
+
+                private boolean isScriptInjected = false;
 
                 @Override
                 public void onPageLoadProgress(int progress) {

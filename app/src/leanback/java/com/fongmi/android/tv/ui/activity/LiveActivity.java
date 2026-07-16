@@ -803,16 +803,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
                 @Override
                 public void onPageFinished(View webView) {
                     Logger.t("WebView").e("页面加载完成");
-
-                    if (!isScriptInjected) {
-//                        injectPlayerScript(webView);
-                        isScriptInjected = true;
-                    }
                     hideProgress();
                 }
-
-                private boolean isScriptInjected = false;
-
 
                 @Override
                 public void onPageLoadProgress(int progress) {
@@ -828,28 +820,6 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
             Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
         }
     }
-
-    //注入js
-    private void injectPlayerScript(View webView) {
-        try {
-            InputStream inputStream = getAssets().open("js/webview_player_impl.js");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            reader.close();
-//            webView.evaluateJavascript(sb.toString(), value -> {
-//                Logger.t("WebView").d("播放器脚本注入完成");
-//            });
-
-        } catch (IOException e) {
-            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
-            // 不抛出异常，允许页面继续加载
-        }
-    }
-
     private void resetAdapter() {
         mBinding.control.action.line.setVisibility(View.GONE);
         mBinding.widget.title.setText("");
