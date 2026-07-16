@@ -12,25 +12,31 @@ import android.view.View.OnTouchListener;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
+import com.fongmi.android.tv.BuildConfig;
+import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.bean.Result;
-import com.tencent.smtt.sdk.WebChromeClient;
-import com.tencent.smtt.sdk.WebSettings;
-import com.tencent.smtt.sdk.WebView;
-import com.tencent.smtt.sdk.WebViewClient;
-
 import com.orhanobut.logger.Logger;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
 
 public class WebViewPlayer extends FrameLayout {
 
     private static final String TAG = "WebViewPlayer";
-    private WebView webView;
+    private static final String JS_FILE_PATH = "js/webview_player_impl.js";
+
     private ProgressBar progressBar;
-    private boolean isUserInteractionEnabled = false; // 默认禁用用户交互
+    private boolean isUserInteractionEnabled = false;
     private VideoPlayerCallback callback;
-    
+    private String mDisableInteractionJs;
+
+    private IWebViewKernel mKernel;
+    private View mWebView;
+
     public interface VideoPlayerCallback {
         void onPageStarted();
-        void onPageFinished(WebView webView);
+        void onPageFinished(View webView);
         void onPageLoadProgress(int progress);
     }
 
@@ -46,6 +52,7 @@ public class WebViewPlayer extends FrameLayout {
         super(context, attrs, defStyleAttr);
         init(context);
     }
+
     public void start(Result result) {
         if (result == null || result.getUrl() == null) {
             Logger.t(TAG).e("Invalid result: result or URL is null");
@@ -55,19 +62,18 @@ public class WebViewPlayer extends FrameLayout {
         Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
         Logger.t(TAG).d("触摸透明状态: " + isTouchTransparent());
 
-        webView.loadUrl(result.getUrl().v(), result.getHeader());
-        // 添加显示动画
-        webView.setAlpha(0f);
-        webView.animate()
+        mKernel.loadUrl(result.getUrl().v(), result.getHeader());
+        mWebView.setAlpha(0f);
+        mWebView.animate()
                 .alpha(1f)
                 .setDuration(300)
                 .start();
     }
 
     public void stop() {
-        if (webView != null) {
-            webView.stopLoading();
-            webView.loadUrl("about:blank");
+        if (mKernel != null) {
+            mKernel.stopLoading();
+            mKernel.loadUrl("about:blank");
         }
         Logger.t(TAG).d("WebView stopped");
     }
@@ -75,124 +81,72 @@ public class WebViewPlayer extends FrameLayout {
     public void setCallback(VideoPlayerCallback callback) {
         this.callback = callback;
     }
+
     private void init(Context context) {
-        initWebView(context);
+        int parseType = Setting.getParseWebView();
+        boolean useX5 = parseType != 0
+                && !"mobile".equals(BuildConfig.FLAVOR_mode)
+                && com.tencent.smtt.sdk.QbSdk.isTbsCoreInited();
+
+        if (useX5) {
+            mKernel = new X5Kernel(context);
+            Logger.t(TAG).d("当前内核：X5 WebView");
+        } else {
+            mKernel = new SystemKernel(context);
+            Logger.t(TAG).d("当前内核：系统 WebView（parseType=" + parseType
+                    + ", flavor=" + BuildConfig.FLAVOR_mode
+                    + ", tbsInited=" + com.tencent.smtt.sdk.QbSdk.isTbsCoreInited() + "）");
+        }
+        mWebView = mKernel.getView();
+
+        mWebView.setBackgroundColor(Color.BLACK);
+        mWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
         initProgressBar(context);
+        setupInternalCallback();
+        mKernel.configureSettings();
         addViewsToLayout();
-        
-        // 默认禁用交互，设置视图属性
+
         setClickable(false);
         setFocusable(false);
         setFocusableInTouchMode(false);
         Logger.t(TAG).d("初始化WebViewPlayer，默认禁用交互");
     }
 
-    private void initWebView(Context context) {
-        webView = new WebView(context);
-        webView.setBackgroundColor(Color.BLACK);
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        setupWebViewSettings();
-        setDefaultWebClients();
-    }
-
-    private void setupWebViewSettings() {
-        WebSettings settings = webView.getSettings();
-        
-        // Core JavaScript and DOM settings
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
-        
-        // Performance optimizations for live streaming
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT); // 页面资源使用缓存加速加载
-        settings.setAppCacheEnabled(true);
-        
-        // 禁用用户交互功能
-        settings.setSupportZoom(false); // 禁用缩放
-        settings.setBuiltInZoomControls(false); // 禁用内置缩放控件
-        settings.setDisplayZoomControls(false); // 禁用显示缩放控件
-        
-        // Media playback settings
-        settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        
-        // Enhanced User-Agent for better compatibility
-        String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0";
-        settings.setUserAgentString(userAgent);
-        
-        // Security settings
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
-        settings.setAllowFileAccessFromFileURLs(false);
-        settings.setAllowUniversalAccessFromFileURLs(false);
-        settings.setDatabaseEnabled(false);
-        settings.setGeolocationEnabled(false);
-        
-        // Mixed content handling for secure streaming
-        settings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            settings.setSafeBrowsingEnabled(false);
-        }
-        
-        // TV adaptation settings
-        webView.setFocusable(false); // 禁用焦点，防止点击
-        webView.setFocusableInTouchMode(false); // 禁用触摸模式下的焦点
-        webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
-        webView.setScrollbarFadingEnabled(true);
-        
-        // 禁用WebView内部的触摸处理，但不干扰事件传递
-        webView.setOnTouchListener(new OnTouchListener() {
+    private void setupInternalCallback() {
+        mKernel.setInternalClient(new InternalWebCallback() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                // 不处理任何事件，让dispatchTouchEvent处理
-                return false;
-            }
-        });
-        
-        Logger.t(TAG).d("WebView settings configured for live streaming");
-    }
-
-    private void setDefaultWebClients() {
-        webView.setWebViewClient(new WebViewClient(){
-            @Override
-            public void onPageStarted(WebView webView, String url, Bitmap favicon) {
-                super.onPageStarted(webView, url, favicon);
-                webView.setBackgroundColor(Color.BLACK); // 立即设置黑色背景
+            public void onPageStarted(String url, Bitmap favicon) {
+                mWebView.setBackgroundColor(Color.BLACK);
                 if (callback != null) {
                     callback.onPageStarted();
                 }
             }
+
             @Override
-            public void onPageFinished(WebView webView, String url) {
-                super.onPageFinished(webView, url);
-                // 页面加载完成后注入禁用交互脚本，不干扰初始加载
+            public void onPageFinished(String url) {
                 if (!isUserInteractionEnabled) {
                     injectDisableInteractionScript();
                 }
                 if (callback != null) {
-                    callback.onPageFinished(webView);
+                    callback.onPageFinished(mWebView);
                 }
-            }
-        });
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int newProgress) {
-                if (progressBar != null) {
-                    progressBar.setProgress(newProgress);
-                    progressBar.setVisibility(newProgress == 100 ? View.GONE : View.VISIBLE);
-                }
-                
-                if (callback != null) {
-                    callback.onPageLoadProgress(newProgress);
-                }
-                
-                Logger.t(TAG).d("Page load progress: " + newProgress + "%");
             }
 
+            @Override
+            public void onProgressChanged(int progress) {
+                if (progressBar != null) {
+                    progressBar.setProgress(progress);
+                    progressBar.setVisibility(progress == 100 ? View.GONE : View.VISIBLE);
+                }
+                if (callback != null) {
+                    callback.onPageLoadProgress(progress);
+                }
+                Logger.t(TAG).d("Page load progress: " + progress + "%");
+            }
         });
     }
+
     private void initProgressBar(Context context) {
         progressBar = new ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, dpToPx(2)));
@@ -201,38 +155,31 @@ public class WebViewPlayer extends FrameLayout {
     }
 
     private void addViewsToLayout() {
-        addView(webView);
+        addView(mWebView);
         addView(progressBar);
     }
 
-    // 简化的触摸事件处理，依赖setClickable控制
-
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
-        // 如果禁用用户交互，直接让父视图处理触摸事件
         if (!isUserInteractionEnabled) {
             Logger.t(TAG).d("禁用交互模式，跳过WebViewPlayer，直接让父视图处理: " + event.getAction());
-            
-            // 直接返回false，不处理任何触摸事件，让父视图处理
             return false;
         }
-        
         return super.dispatchTouchEvent(event);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        // 如果禁用用户交互，确保事件不被消费，让父视图处理
         if (!isUserInteractionEnabled) {
             Logger.t(TAG).d("禁用交互模式，不处理触摸事件: " + event.getAction());
-            return false; // 不消费事件，让LiveActivity处理手势
+            return false;
         }
         return super.onTouchEvent(event);
     }
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (webView != null && webView.dispatchKeyEvent(event)) {
+        if (mWebView != null && mWebView.dispatchKeyEvent(event)) {
             return true;
         }
         return super.dispatchKeyEvent(event);
@@ -240,19 +187,19 @@ public class WebViewPlayer extends FrameLayout {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (webView != null && webView.onKeyDown(keyCode, event)) {
+        if (mWebView != null && mWebView.onKeyDown(keyCode, event)) {
             return true;
         }
         return super.onKeyDown(keyCode, event);
     }
+
     public void setUserInteractionEnabled(boolean enabled) {
         isUserInteractionEnabled = enabled;
-        if (webView != null) {
-            webView.setFocusable(enabled);
-            webView.setFocusableInTouchMode(enabled);
+        if (mWebView != null) {
+            mWebView.setFocusable(enabled);
+            mWebView.setFocusableInTouchMode(enabled);
         }
-        
-        // 当禁用交互时，让WebViewPlayer对触摸事件透明
+
         if (!enabled) {
             setClickable(false);
             setFocusable(false);
@@ -262,93 +209,369 @@ public class WebViewPlayer extends FrameLayout {
             setFocusable(true);
             setFocusableInTouchMode(true);
         }
-        
+
         Logger.t(TAG).d("用户交互设置: " + (enabled ? "启用" : "禁用") + ", 视图可点击: " + isClickable());
     }
-    
-    /**
-     * 禁用用户交互（点击、触摸等）
-     */
+
     public void disableUserInteraction() {
         setUserInteractionEnabled(false);
     }
-    
-    /**
-     * 启用用户交互（点击、触摸等）
-     */
+
     public void enableUserInteraction() {
         setUserInteractionEnabled(true);
     }
-    
-    /**
-     * 获取当前用户交互状态
-     */
+
     public boolean isUserInteractionEnabled() {
         return isUserInteractionEnabled;
     }
-    
-    /**
-     * 检查WebViewPlayer是否对触摸事件透明
-     */
+
     public boolean isTouchTransparent() {
         return !isClickable() && !isFocusable();
     }
 
-    /**
-     * 注入JavaScript禁用网页内容交互，但不影响LiveActivity手势
-     */
+    private String loadJsFromAssets(String fileName) {
+        InputStream inputStream = null;
+        try {
+            inputStream = getContext().getAssets().open(fileName);
+            byte[] buffer = new byte[inputStream.available()];
+            inputStream.read(buffer);
+            return new String(buffer, "UTF-8");
+        } catch (IOException e) {
+            Logger.t(TAG).e("读取JS文件失败: " + fileName, e);
+            return null;
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
     private void injectDisableInteractionScript() {
-        String script = 
-            "javascript:" +
-            "(function(){" +
-                // 只禁用网页内容的交互，不影响容器级别的手势
-                "var style = document.createElement('style');" +
-                "style.innerHTML = '* { " +
-                    "-webkit-user-select: none !important; " +
-                    "-webkit-touch-callout: none !important; " +
-                    "-webkit-tap-highlight-color: rgba(0,0,0,0) !important; " +
-                    "user-select: none !important; " +
-                "} a, button, input, textarea { pointer-events: none !important; }';" +
-                "document.head.appendChild(style);" +
-                // 禁用特定事件，但不禁用触摸滑动
-                "document.addEventListener('click', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
-                "document.addEventListener('contextmenu', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
-                "document.addEventListener('selectstart', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
-                "document.addEventListener('dragstart', function(e){e.preventDefault(); e.stopPropagation();}, true);" +
-            "})()";
-        
-        webView.post(() -> {
-            webView.loadUrl(script);
-            Logger.t(TAG).d("已注入禁用WebView内容交互的JavaScript代码");
+        if (mDisableInteractionJs == null) {
+            mDisableInteractionJs = loadJsFromAssets(JS_FILE_PATH);
+            if (mDisableInteractionJs == null) {
+                Logger.t(TAG).e("JS文件读取失败，跳过注入");
+                return;
+            }
+        }
+
+        final String script = mDisableInteractionJs;
+
+        mWebView.post(() -> {
+            mKernel.evaluateJavascript(script);
+            Logger.t(TAG).d("已从assets加载并注入禁用交互JS");
         });
     }
 
     public void onResume() {
-        if (webView != null) {
-            webView.onResume();
-            webView.resumeTimers();
+        if (mKernel != null) {
+            mKernel.onResume();
         }
     }
 
     public void onPause() {
-        if (webView != null) {
-            webView.onPause();
-            webView.pauseTimers();
+        if (mKernel != null) {
+            mKernel.onPause();
         }
     }
 
     public void destroy() {
-        if (webView != null) {
-            webView.stopLoading();
-            webView.setWebViewClient(null);
-            webView.setWebChromeClient(null);
-            webView.destroy();
-            webView = null;
+        if (mKernel != null) {
+            mKernel.destroy();
+            mKernel = null;
+            mWebView = null;
         }
+        mDisableInteractionJs = null;
         removeAllViews();
     }
 
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density);
+    }
+
+    private interface IWebViewKernel {
+        View getView();
+
+        void loadUrl(String url, Map<String, String> headers);
+
+        void loadUrl(String url);
+        void evaluateJavascript(String script);
+        void stopLoading();
+
+        void onResume();
+
+        void onPause();
+
+        void destroy();
+
+        void configureSettings();
+
+        void setInternalClient(InternalWebCallback callback);
+    }
+
+    private interface InternalWebCallback {
+        void onPageStarted(String url, Bitmap favicon);
+
+        void onPageFinished(String url);
+
+        void onProgressChanged(int progress);
+    }
+
+    private class X5Kernel implements IWebViewKernel {
+        private com.tencent.smtt.sdk.WebView webView;
+        private InternalWebCallback callback;
+
+        public X5Kernel(Context context) {
+            webView = new com.tencent.smtt.sdk.WebView(context);
+        }
+
+        @Override
+        public View getView() {
+            return webView;
+        }
+
+        @Override
+        public void loadUrl(String url, Map<String, String> headers) {
+            webView.loadUrl(url, headers);
+        }
+        @Override
+        public void evaluateJavascript(String script) {
+            webView.evaluateJavascript(script, null);
+        }
+        @Override
+        public void loadUrl(String url) {
+            webView.loadUrl(url);
+        }
+
+        @Override
+        public void stopLoading() {
+            webView.stopLoading();
+        }
+
+        @Override
+        public void onResume() {
+            webView.onResume();
+            webView.resumeTimers();
+        }
+
+        @Override
+        public void onPause() {
+            webView.onPause();
+            webView.pauseTimers();
+        }
+
+        @Override
+        public void destroy() {
+            webView.stopLoading();
+            webView.setWebViewClient(null);
+            webView.setWebChromeClient(null);
+            webView.destroy();
+        }
+
+        @Override
+        public void configureSettings() {
+            com.tencent.smtt.sdk.WebSettings settings = webView.getSettings();
+
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+
+            settings.setCacheMode(com.tencent.smtt.sdk.WebSettings.LOAD_DEFAULT);
+            settings.setAppCacheEnabled(true);
+
+            settings.setSupportZoom(false);
+            settings.setBuiltInZoomControls(false);
+            settings.setDisplayZoomControls(false);
+
+            settings.setMediaPlaybackRequiresUserGesture(false);
+            settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+            String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0";
+            settings.setUserAgentString(userAgent);
+
+            settings.setAllowFileAccess(false);
+            settings.setAllowContentAccess(false);
+            settings.setAllowFileAccessFromFileURLs(false);
+            settings.setAllowUniversalAccessFromFileURLs(false);
+            settings.setDatabaseEnabled(false);
+            settings.setGeolocationEnabled(false);
+
+            settings.setMixedContentMode(2);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                settings.setSafeBrowsingEnabled(false);
+            }
+
+            webView.setFocusable(false);
+            webView.setFocusableInTouchMode(false);
+            webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
+            webView.setScrollbarFadingEnabled(true);
+
+            webView.setOnTouchListener((v, event) -> false);
+
+            Logger.t(TAG).d("X5内核配置完成");
+        }
+
+        @Override
+        public void setInternalClient(InternalWebCallback callback) {
+            this.callback = callback;
+            webView.setWebViewClient(new com.tencent.smtt.sdk.WebViewClient() {
+                @Override
+                public void onPageStarted(com.tencent.smtt.sdk.WebView view, String url, Bitmap favicon) {
+                    super.onPageStarted(view, url, favicon);
+                    if (callback != null) callback.onPageStarted(url, favicon);
+                }
+
+                @Override
+                public void onPageFinished(com.tencent.smtt.sdk.WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    if (callback != null) callback.onPageFinished(url);
+                }
+            });
+
+            webView.setWebChromeClient(new com.tencent.smtt.sdk.WebChromeClient() {
+                @Override
+                public void onProgressChanged(com.tencent.smtt.sdk.WebView view, int newProgress) {
+                    super.onProgressChanged(view, newProgress);
+                    if (callback != null) callback.onProgressChanged(newProgress);
+                }
+            });
+        }
+    }
+
+    private class SystemKernel implements IWebViewKernel {
+        private android.webkit.WebView webView;
+        private InternalWebCallback callback;
+
+        public SystemKernel(Context context) {
+            webView = new android.webkit.WebView(context);
+        }
+
+        @Override
+        public View getView() {
+            return webView;
+        }
+
+        @Override
+        public void loadUrl(String url, Map<String, String> headers) {
+            webView.loadUrl(url, headers);
+        }
+
+        @Override
+        public void loadUrl(String url) {
+            webView.loadUrl(url);
+        }
+
+        @Override
+        public void evaluateJavascript(String script) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                webView.evaluateJavascript(script, null);
+            } else {
+                webView.loadUrl("javascript:" + script);
+            }
+        }
+
+        @Override
+        public void stopLoading() {
+            webView.stopLoading();
+        }
+
+        @Override
+        public void onResume() {
+            webView.onResume();
+            webView.resumeTimers();
+        }
+
+        @Override
+        public void onPause() {
+            webView.onPause();
+            webView.pauseTimers();
+        }
+
+        @Override
+        public void destroy() {
+            webView.stopLoading();
+            webView.setWebViewClient(null);
+            webView.setWebChromeClient(null);
+            webView.destroy();
+        }
+
+        @Override
+        public void configureSettings() {
+            android.webkit.WebSettings settings = webView.getSettings();
+
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+
+            settings.setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT);
+//            settings.setAppCacheEnabled(true);
+            settings.setSupportZoom(false);
+            settings.setBuiltInZoomControls(false);
+            settings.setDisplayZoomControls(false);
+
+            settings.setMediaPlaybackRequiresUserGesture(false);
+            settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+            String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0";
+            settings.setUserAgentString(userAgent);
+
+            settings.setAllowFileAccess(false);
+            settings.setAllowContentAccess(false);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                settings.setAllowFileAccessFromFileURLs(false);
+                settings.setAllowUniversalAccessFromFileURLs(false);
+            }
+            settings.setDatabaseEnabled(false);
+            settings.setGeolocationEnabled(false);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                settings.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                settings.setSafeBrowsingEnabled(false);
+            }
+
+            webView.setFocusable(false);
+            webView.setFocusableInTouchMode(false);
+            webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
+            webView.setScrollbarFadingEnabled(true);
+
+            webView.setOnTouchListener((v, event) -> false);
+
+            Logger.t(TAG).d("系统内核配置完成");
+        }
+
+        @Override
+        public void setInternalClient(InternalWebCallback callback) {
+            this.callback = callback;
+            webView.setWebViewClient(new android.webkit.WebViewClient() {
+                @Override
+                public void onPageStarted(android.webkit.WebView view, String url, Bitmap favicon) {
+                    super.onPageStarted(view, url, favicon);
+                    if (callback != null) callback.onPageStarted(url, favicon);
+                }
+
+                @Override
+                public void onPageFinished(android.webkit.WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    if (callback != null) callback.onPageFinished(url);
+                }
+            });
+
+            webView.setWebChromeClient(new android.webkit.WebChromeClient() {
+                @Override
+                public void onProgressChanged(android.webkit.WebView view, int newProgress) {
+                    super.onProgressChanged(view, newProgress);
+                    if (callback != null) callback.onProgressChanged(newProgress);
+                }
+            });
+        }
     }
 }
