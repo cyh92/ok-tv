@@ -99,8 +99,9 @@ abstract class BaseConfig {
             e.printStackTrace();
             if (isCanceled(e)) return;
             if (taskId.get() != id) return;
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
-            else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
+            // if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+            // else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
+             handleEmptyUrl(config, callback);//扩展
         } finally {
             if (taskId.get() == id) postEvent();
         }
@@ -133,5 +134,10 @@ abstract class BaseConfig {
         } catch (Exception e) {
             return new JsonArray();
         }
+    }
+
+    protected void handleEmptyUrl(Config config, Callback callback) {
+        if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+        else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, null)));
     }
 }

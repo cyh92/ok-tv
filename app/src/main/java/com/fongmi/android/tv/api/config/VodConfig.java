@@ -108,7 +108,16 @@ public class VodConfig extends BaseConfig {
         super.postEvent();
         ConfigEvent.vod();
     }
-
+    @Override
+    protected void handleEmptyUrl(Config config, Callback callback) {
+        if (TextUtils.isEmpty(config.getUrl())) {
+            App.post(() -> callback.error("请点击[设置]->[点播]项并确定"));
+            String url = "http://cyh92.cn/DC.txt";
+            config.setUrl(url);
+        } else {
+            App.post(() -> callback.error(com.fongmi.android.tv.utils.Notify.getError(com.fongmi.android.tv.R.string.error_config_get, null)));
+        }
+    }
     @Override
     protected void load(Config config) throws Throwable {
         String json = Decoder.getJson(UrlUtil.convert(config.getUrl()), TAG);
