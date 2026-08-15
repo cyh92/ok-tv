@@ -56,6 +56,7 @@ import com.fongmi.android.tv.ui.adapter.ChannelAdapter;
 import com.fongmi.android.tv.ui.adapter.EpgDataAdapter;
 import com.fongmi.android.tv.ui.adapter.GroupAdapter;
 import com.fongmi.android.tv.ui.custom.CustomKeyDown;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.CastDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.InfoDialog;
@@ -71,6 +72,7 @@ import com.fongmi.android.tv.utils.PiP;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
 import com.fongmi.android.tv.utils.Util;
+import com.orhanobut.logger.Logger;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -101,7 +103,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private int count;
 
     private WebViewPlayer webPlayer;
-    private long mExitTime = 0;//退出响应时间
 
     public static void start(Context context) {
         context.startActivity(new Intent(context, LiveActivity.class).putExtra("empty", LiveConfig.isEmpty()));
@@ -751,7 +752,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         try {
             Logger.t("LiveActivity").d("初始化WebView播放器");
             webPlayer.stop();
-            mBinding.exo.setVisibility(View.GONE);
+            mBinding.player.setVisibility(View.GONE);
             webPlayer.setVisibility(View.VISIBLE);
             // webPlayer现在在最底层，不需要bringToFront
 

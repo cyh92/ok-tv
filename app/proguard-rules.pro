@@ -80,3 +80,9 @@
 -keep class com.google.zxing.qrcode.QRCodeReader { *; }
 -keep class com.google.zxing.qrcode.QRCodeWriter { *; }
 -keep class com.google.zxing.qrcode.decoder.ErrorCorrectionLevel { *; }
+
+#自定义功能
+-dontwarn sun.misc.**
+-dontwarn dalvik.system.VMStack
+# 抑制其他可能缺失的类警告
+-dontwarn javax.annotation.**
