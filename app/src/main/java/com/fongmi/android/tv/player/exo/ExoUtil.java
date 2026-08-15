@@ -43,7 +43,7 @@ public class ExoUtil {
         ExoPlayer player = preloadManagerBuilder.buildExoPlayer(playerBuilder);
         if (BuildConfig.DEBUG) player.addAnalyticsListener(new EventLogger());
         player.setAudioAttributes(AudioAttributes.DEFAULT, true);
-        player.setHandleAudioBecomingNoisy(true);
+        player.setHandleAudioBecomingNoisy(false);//显示设备关闭时播放不暂停
         player.setPlayWhenReady(true);
         player.addListener(listener);
         return player;
