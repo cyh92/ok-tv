@@ -38,7 +38,9 @@ public class Notify {
     }
 
     public static String getError(int resId, Throwable e) {
-        if (TextUtils.isEmpty(e.getMessage())) return ResUtil.getString(resId);
+//        if (TextUtils.isEmpty(e.getMessage())) return ResUtil.getString(resId);
+        //增加e的判断以解决在线路连接失败时app崩溃
+        if (e == null || TextUtils.isEmpty(e.getMessage())) return ResUtil.getString(resId);
         return ResUtil.getString(resId) + "\n" + e.getMessage();
     }
 

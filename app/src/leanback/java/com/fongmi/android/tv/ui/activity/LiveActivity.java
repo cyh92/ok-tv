@@ -57,6 +57,7 @@ import com.fongmi.android.tv.ui.adapter.EpgDataAdapter;
 import com.fongmi.android.tv.ui.adapter.GroupAdapter;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
 import com.fongmi.android.tv.ui.custom.CustomLiveListView;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
@@ -68,6 +69,7 @@ import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
+import com.orhanobut.logger.Logger;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -99,6 +101,9 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     private Channel mChannel;
     private String mPlaybackKey;
     private int count;
+
+    private WebViewPlayer webPlayer;
+    private long mExitTime = 0;//退出响应时间
 
     public static void start(Context context) {
         context.startActivity(new Intent(context, LiveActivity.class).putExtra("empty", LiveConfig.isEmpty()));
@@ -154,6 +159,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
+        webPlayer = new WebViewPlayer(this);//初始化webview
         mClock = Clock.create(mBinding.widget.clock);
         mKeyDown = CustomKeyDownLive.create(this);
         mHides = new ArrayList<>();
@@ -208,6 +214,9 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void setVideoView() {
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
+
         setScale(LiveSetting.getScale());
         setSeekNextFocusDown(R.id.config);
         setActionFocusBoundary(mBinding.control.action.getRoot());
@@ -774,9 +783,64 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void startPlayback(Result result, long position, MediaMetadata metadata) {
-        startPlayer(mPlaybackKey = result.getRealUrl(), result, false, getHome().getTimeout(), position, metadata);
+//        startPlayer(mPlaybackKey = result.getRealUrl(), result, false, getHome().getTimeout(), position, metadata);
+
+        mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
+        mBinding.control.action.action.setVisibility(result.getParse() == 2  ? View.GONE : View.VISIBLE);//直播时隐藏控制按钮
+        if (result.getParse() == 2) {
+            Logger.t("LiveActivity").d("切换到WebView模式");
+            showWebView(result);
+        } else {
+            Logger.t("LiveActivity").d("切换到标准播放器模式");
+            webPlayer.stop();
+            webPlayer.setVisibility(View.GONE);
+            mBinding.player.setVisibility(View.VISIBLE);
+
+            startPlayer(mPlaybackKey = result.getRealUrl(), result, false, getHome().getTimeout(), position, metadata);
+
+        }
     }
 
+    // 显示WebView并加载URL
+    private void showWebView(Result result) {
+        try {
+            Logger.t("LiveActivity").d("初始化WebView播放器");
+            webPlayer.stop();
+            mBinding.player.setVisibility(View.GONE);
+            webPlayer.setVisibility(View.VISIBLE);
+            // webPlayer现在在最底层，不需要bringToFront
+
+            // 检查WebViewPlayer的触摸透明状态
+            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
+            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
+
+            // 设置回调监听
+            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
+                @Override
+                public void onPageStarted() {
+                    showProgress();
+                }
+
+                @Override
+                public void onPageFinished(View webView) {
+                    Logger.t("WebView").e("页面加载完成");
+                    hideProgress();
+                }
+
+                @Override
+                public void onPageLoadProgress(int progress) {
+                    if (progress > 99) {
+                        hideProgress();
+                    }
+                }
+            });
+            webPlayer.start(result);
+
+
+        } catch (Exception e) {
+            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+        }
+    }
     @Override
     public void resetPlaybackForError(String msg) {
         PlaybackReset.afterError(player());
@@ -907,6 +971,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void setTrackVisible() {
         PlaybackAction.setTracks(player(), mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video, mBinding.control.action.speed);
+        mBinding.control.seek.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏进度条
+        mBinding.control.action.action.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏控制
     }
 
     private void prevChannel() {
@@ -984,14 +1050,14 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void onKeyUp() {
-        if (LiveSetting.isInvert()) nextChannel();
-        else prevChannel();
+        if (LiveSetting.isInvert()) prevChannel();
+        else nextChannel();
     }
 
     @Override
     public void onKeyDown() {
-        if (LiveSetting.isInvert()) prevChannel();
-        else nextChannel();
+        if (LiveSetting.isInvert()) nextChannel();
+        else prevChannel();
     }
 
     @Override
