@@ -17,4 +17,10 @@
     <string name="push_clip">推送剪贴板内容</string>
     <string name="push_info">使用手机扫描二维码，或于浏览器访问地址\n<xliff:g name="name">%s</xliff:g></string>
 
+    <!-- Setting Custom -->
+    <string-array name="select_home_ui">
+        <item>简洁风格</item>
+        <item>TVBox风格</item>
+    </string-array>
+
 </resources>

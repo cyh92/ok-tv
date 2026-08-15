@@ -374,6 +374,12 @@
     <string name="times">times</string>
     <string name="lines">lines</string>
 
+    <!-- X5 WebView -->
+    <string name="x5webview_title">X5 WebView</string>
+    <string name="x5webview_download_enable">Unzip X5 WebView and Enable?</string>
+    <string name="x5webview_enabled">X5 WebView Enabled</string>
+    <string name="x5webview_parsing">X5 WebView Parsing</string>
+
     <string-array name="select_decode">
         <item>Soft</item>
         <item>Hard</item>

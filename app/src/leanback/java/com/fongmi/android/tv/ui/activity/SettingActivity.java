@@ -120,6 +120,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         mBinding.wallDefault.setOnClickListener(this::setWallDefault);
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
         mBinding.wallRefresh.setOnLongClickListener(this::onWallHistory);
+        mBinding.custom.setOnClickListener(this::onCustom);
     }
 
     @Override
@@ -223,7 +224,9 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     private void onPlayer(View view) {
         SettingPlayerActivity.start(this);
     }
-
+    private void onCustom(View view) {
+        SettingCustomActivity.start(this);
+    }
     private void onDanmaku(View view) {
         SettingDanmakuActivity.start(this);
     }
