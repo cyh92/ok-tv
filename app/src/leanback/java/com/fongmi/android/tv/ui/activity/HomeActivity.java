@@ -48,6 +48,7 @@ import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.service.DLNARendererService;
 import com.fongmi.android.tv.service.PlaybackService;
+import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.adapter.BaseDiffCallback;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
@@ -284,13 +285,28 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void getHistory(boolean renew) {
-        List<History> items = History.get();
         int historyIndex = getHistoryIndex();
         int recommendIndex = getRecommendIndex();
+        if (historyIndex == 0) {
+            if (!Setting.isHomeHistory()) return;
+            int historyStringIndex = recommendIndex - 1;
+//            historyStringIndex = historyStringIndex < 0 ? 0 : historyStringIndex;
+            mAdapter.add(historyStringIndex, R.string.home_history);
+        }
+        if (!Setting.isHomeHistory()) {
+            //在最近观看存在数据时移除“最近观看”标签和观看的视频详情两行
+            mAdapter.removeItems(historyIndex - 1, mHistoryAdapter.size() > 0 ? 2 : 1);
+            return;
+        }
+        List<History> items = History.get();
+        historyIndex = getHistoryIndex();
+        recommendIndex = getRecommendIndex();
         boolean exist = recommendIndex - historyIndex == 2;
-        if (renew) mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
+        if (renew)
+            mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
         if ((items.isEmpty() && exist) || (renew && exist)) mAdapter.removeItems(historyIndex, 1);
-        if ((!items.isEmpty() && !exist) || (renew && exist)) mAdapter.add(historyIndex, new ListRow(mHistoryAdapter));
+        if ((!items.isEmpty() && !exist) || (renew && exist))
+            mAdapter.add(historyIndex, new ListRow(mHistoryAdapter));
         mHistoryAdapter.setItems(items, new BaseDiffCallback<History>());
     }
 
