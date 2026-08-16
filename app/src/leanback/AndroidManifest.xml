@@ -173,7 +173,10 @@
             android:exported="false"
             android:screenOrientation="sensorLandscape"
             android:windowSoftInputMode="adjustResize" />
-
+        <activity
+            android:name=".ui.activity.HistoryActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|orientation"
+            android:screenOrientation="sensorLandscape" />
         <service
             android:name=".service.DLNARendererService"
             android:exported="false"

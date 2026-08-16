@@ -92,6 +92,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private Result mResult;
     private Clock mClock;
 
+    private long mExitTime = 0;//退出响应时间
+
     private Site getHome() {
         return VodConfig.get().getHome();
     }
@@ -276,6 +278,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         items.add(Func.create(R.string.home_search));
         items.add(Func.create(R.string.home_keep));
         items.add(Func.create(R.string.home_push));
+        items.add(Func.create(R.string.home_history));//补加“最近观看”按钮
         items.add(Func.create(R.string.home_setting));
         mFuncAdapter.setItems(items, new BaseDiffCallback<Func>());
     }
@@ -410,6 +413,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         else if (item.getResId() == R.string.home_keep) KeepActivity.start(this);
         else if (item.getResId() == R.string.home_push) PushActivity.start(this);
         else if (item.getResId() == R.string.home_search) SearchActivity.start(this);
+        else if (item.getResId() == R.string.home_history) HistoryActivity.start(this);//补加“最近观看”按钮
         else if (item.getResId() == R.string.home_setting) SettingActivity.start(this);
     }
 
@@ -466,6 +470,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (KeyUtil.isMenuKey(event)) showDialog();
         if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && getCurrentFocus() == mBinding.title) return mBinding.recycler.getChildAt(0).requestFocus();
+        if (KeyUtil.isActionDown(event) && KeyUtil.isDigitKey(event))
+            LiveActivity.start(this);//主页面按任意数字键进入直播
         return super.dispatchKeyEvent(event);
     }
 
@@ -489,9 +495,15 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             setHistoryDelete(false);
         } else if (mBinding.recycler.getSelectedPosition() != 0) {
             mBinding.recycler.scrollToPosition(0);
+        } else if (PlaybackService.isRunning()) {
+            moveTaskToBack(true);
         } else {
-            if (PlaybackService.isRunning()) Util.moveToBackground(this);
-            else super.onBackInvoked();
+            if (System.currentTimeMillis() - mExitTime < 2000) {
+                super.onBackInvoked();
+            } else {
+                mExitTime = System.currentTimeMillis();
+                Notify.show("再按一次返回键退出应用");
+            }
         }
     }
 
