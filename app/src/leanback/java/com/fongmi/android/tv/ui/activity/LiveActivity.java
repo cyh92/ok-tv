@@ -575,7 +575,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void showControl(View view) {
         mBinding.control.getRoot().setVisibility(View.VISIBLE);
-        mBinding.widget.top.setVisibility(View.VISIBLE);
+//        mBinding.widget.top.setVisibility(View.VISIBLE);
         App.post(view::requestFocus, 25);
         setR1Callback();
         hideInfo();
@@ -583,7 +583,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void hideControl() {
         mBinding.control.getRoot().setVisibility(View.GONE);
-        mBinding.widget.top.setVisibility(View.GONE);
+//        mBinding.widget.top.setVisibility(View.GONE);
         App.removeCallbacks(mR1);
     }
 
@@ -593,12 +593,14 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void showInfo() {
+        mBinding.widget.top.setVisibility(View.VISIBLE);//自修改
         mBinding.widget.bottom.setVisibility(View.VISIBLE);
         setR3Callback();
         setInfo();
     }
 
     private void hideInfo() {
+        mBinding.widget.top.setVisibility(View.GONE);//自修改
         mBinding.widget.bottom.setVisibility(View.GONE);
         App.removeCallbacks(mR3);
     }
