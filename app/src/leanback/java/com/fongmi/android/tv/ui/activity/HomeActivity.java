@@ -29,6 +29,7 @@ import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.bean.Cache;
+import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Func;
 import com.fongmi.android.tv.bean.History;
@@ -50,6 +51,7 @@ import com.fongmi.android.tv.service.DLNARendererService;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.adapter.BaseDiffCallback;
+import com.fongmi.android.tv.ui.adapter.TypeAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
 import com.fongmi.android.tv.ui.custom.CustomSelector;
@@ -81,7 +83,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-public class HomeActivity extends BaseActivity implements CustomTitleView.Listener, VodPresenter.OnClickListener, FuncPresenter.OnClickListener, HistoryPresenter.OnClickListener {
+public class HomeActivity extends BaseActivity implements CustomTitleView.Listener, VodPresenter.OnClickListener, FuncPresenter.OnClickListener, HistoryPresenter.OnClickListener,TypeAdapter.OnClickListener {
 
     private ActivityHomeBinding mBinding;
     private ArrayObjectAdapter mHistoryAdapter;
@@ -89,6 +91,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private ArrayObjectAdapter mAdapter;
     private HistoryPresenter mPresenter;
     private SiteViewModel mViewModel;
+    private TypeAdapter mTypeAdapter;
     private Result mResult;
     private Clock mClock;
 
@@ -147,7 +150,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             }
         });
     }
-
     private void checkAction(Intent intent) {
         if (Intent.ACTION_SEND.equals(intent.getAction())) {
             VideoActivity.push(this, intent.getStringExtra(Intent.EXTRA_TEXT));
@@ -178,6 +180,17 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_SMALL, HorizontalGridView.FOCUS_SCROLL_ALIGNED), HistoryPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
+
+        mBinding.typeRecycler.setHorizontalSpacing(ResUtil.dp2px(16));
+        mBinding.typeRecycler.setRowHeight(android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        mBinding.typeRecycler.setAdapter(mTypeAdapter = new TypeAdapter(this));
+        setHomeUI();
+    }
+    //首页样式
+    private void setHomeUI() {
+        if (Setting.getHomeUI() == 0) mBinding.typeRecycler.setVisibility(View.GONE);
+        else
+            mBinding.typeRecycler.setVisibility(View.VISIBLE);
     }
 
     private void setViewModel() {
@@ -185,6 +198,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mViewModel.getResult().observe(this, result -> {
             mAdapter.remove("progress");
             addVideo(mResult = result);
+            mTypeAdapter.addAll(result.getTypes());
             Cache.clear().put(result);
         });
     }
@@ -360,6 +374,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             case HOME:
                 getVideo();
                 setTitle();
+                setHomeUI();
                 break;
             case HISTORY:
                 getHistory();
@@ -470,11 +485,29 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (KeyUtil.isMenuKey(event)) showDialog();
         if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && getCurrentFocus() == mBinding.title) return mBinding.recycler.getChildAt(0).requestFocus();
-        if (KeyUtil.isActionDown(event) && KeyUtil.isDigitKey(event))
-            LiveActivity.start(this);//主页面按任意数字键进入直播
+
+        if (KeyUtil.isActionDown(event) && KeyUtil.isDigitKey(event))LiveActivity.start(this);//主页面按任意数字键进入直播
+        if (KeyUtil.isActionDown(event) & KeyUtil.isUpKey(event) && mBinding.typeRecycler.hasFocus()) return requestTitleFocus();
+        if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && mBinding.typeRecycler.hasFocus()) return requestContentFocus();
+        if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && getCurrentFocus() == mBinding.title) return requestHomeFocus();
         return super.dispatchKeyEvent(event);
     }
 
+    private boolean requestTitleFocus() {
+        mBinding.title.setFocusable(true);
+        return mBinding.title.requestFocus();
+    }
+
+    private boolean requestHomeFocus() {
+        if (mBinding.typeRecycler.getVisibility() == View.VISIBLE) return mBinding.typeRecycler.requestFocus();
+        return requestContentFocus();
+    }
+    private boolean requestContentFocus() {
+        if (mBinding.recycler.getVisibility() != View.VISIBLE || mBinding.recycler.getChildCount() == 0) return false;
+        View child = mBinding.recycler.getFocusedChild();
+        if (child == null) child = mBinding.recycler.getChildAt(0);
+        return child != null && child.requestFocus();
+    }
     @Override
     protected void onResume() {
         super.onResume();
@@ -517,5 +550,15 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         Source.get().exit();
         Server.get().stop();
         super.onDestroy();
+    }
+
+    @Override
+    public void onItemClick(Class item) {
+        VodActivity.start(this, getHome().getKey(), mResult, mTypeAdapter.indexOf(item));
+    }
+
+    @Override
+    public void onRefresh(Class item) {
+        onItemClick(item);
     }
 }

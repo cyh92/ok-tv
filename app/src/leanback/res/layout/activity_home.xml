@@ -47,7 +47,24 @@
             tools:text="09:20:00" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
-
+    <androidx.leanback.widget.HorizontalGridView
+        android:id="@+id/typeRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:nextFocusUp="@id/title"
+        android:nextFocusDown="@id/recycler"
+        android:paddingStart="24dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        android:background="@android:color/transparent"
+        android:listSelector="@null"
+        app:focusOutEnd="false"
+        app:focusOutFront="false"
+        tools:visibility="visible" />
     <com.fongmi.android.tv.ui.custom.ProgressLayout
         android:id="@+id/progressLayout"
         android:layout_width="match_parent"
