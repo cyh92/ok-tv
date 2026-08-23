@@ -188,9 +188,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
     //首页样式
     private void setHomeUI() {
-        if (Setting.getHomeUI() == 0) mBinding.typeRecycler.setVisibility(View.GONE);
-        else
-            mBinding.typeRecycler.setVisibility(View.VISIBLE);
+        boolean show = Setting.getHomeUI() != 0 && mTypeAdapter.getItemCount() > 0;
+        mBinding.typeRecycler.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     private void setViewModel() {
@@ -199,6 +198,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             mAdapter.remove("progress");
             addVideo(mResult = result);
             mTypeAdapter.addAll(result.getTypes());
+            if (!result.getTypes().isEmpty()) mBinding.typeRecycler.setSelectedPosition(0);
+            setHomeUI();
             Cache.clear().put(result);
         });
     }
@@ -554,7 +555,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void onItemClick(Class item) {
-        VodActivity.start(this, getHome().getKey(), mResult, mTypeAdapter.indexOf(item));
+        Result result = mResult == null || mResult.getTypes().isEmpty() ? mResult : mResult;
+        VodActivity.start(this, getHome().getKey(), result, mTypeAdapter.indexOf(item));
     }
 
     @Override
