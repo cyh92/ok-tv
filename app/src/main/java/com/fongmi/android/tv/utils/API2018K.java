@@ -97,11 +97,21 @@ public class API2018K {
         String[] arr2 = v2.split("\\.");
         int length = Math.max(arr1.length, arr2.length);
         for (int i = 0; i < length; i++) {
-            int n1 = i < arr1.length ? Integer.parseInt(arr1[i]) : 0;
-            int n2 = i < arr2.length ? Integer.parseInt(arr2[i]) : 0;
+            // 断网时 versionNumber 为空串，"" .split("\\.") 返回 [""]，parseInt("") 会抛 NumberFormatException，需保护
+            int n1 = parsePart(i < arr1.length ? arr1[i] : null);
+            int n2 = parsePart(i < arr2.length ? arr2[i] : null);
             if (n1 != n2) return n1 - n2;
         }
         return 0;
+    }
+
+    private static int parsePart(String part) {
+        if (part == null || part.isEmpty()) return 0;
+        try {
+            return Integer.parseInt(part);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
