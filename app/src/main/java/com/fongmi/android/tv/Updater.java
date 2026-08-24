@@ -60,10 +60,14 @@ public class Updater implements Download.Callback, UpdateListener {
     }
 
     private void check(FragmentActivity activity) {
-        if (!API2018K.hasUpdate(BuildConfig.VERSION_NAME)) return;
-        String name = API2018K.getVersion();
-        String desc = API2018K.getVersionInfo();
-        App.post(() -> show(activity, name, desc));
+        try {
+            if (!API2018K.hasUpdate(BuildConfig.VERSION_NAME)) return;
+            String name = API2018K.getVersion();
+            String desc = API2018K.getVersionInfo();
+            App.post(() -> show(activity, name, desc));
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
     }
     private void doInBackground(FragmentActivity activity) {
         try {
