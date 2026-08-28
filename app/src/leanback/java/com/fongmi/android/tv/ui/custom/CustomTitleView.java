@@ -32,13 +32,27 @@ public class CustomTitleView extends MaterialTextView {
 
     public CustomTitleView(@NonNull Context context) {
         super(context);
+        initNoFocus();
     }
 
     public CustomTitleView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         flicker = ResUtil.getAnim(R.anim.flicker);
+        initNoFocus();
+    }
+    /**
+     * TV遥控器：禁止被焦点选中
+     */
+    private void initNoFocus() {
+        setFocusable(false);
+        setFocusableInTouchMode(false);
     }
 
+    // 关键拦截：任何地方调用requestFocus直接拒绝
+    @Override
+    public boolean requestFocus(int direction, Rect previouslyFocusedRect) {
+        return false;
+    }
     public void setListener(Listener listener) {
         this.listener = listener;
         setOnClickListener(v -> listener.showDialog());
