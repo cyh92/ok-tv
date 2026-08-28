@@ -4,6 +4,7 @@ import android.util.Base64;
 
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.api.Decoder;
+import com.fongmi.android.tv.setting.Setting;
 import com.github.catvod.net.OkHttp;
 
 import org.json.JSONObject;
@@ -45,14 +46,27 @@ public class API2018K {
             String result = OkHttp.string(url);
             JSONObject json = new JSONObject(result);
             String data = json.optString("data");
+            JSONObject obj;
             if (!data.isEmpty()) {
-                return new JSONObject(decryptOpenSslNative(data, KEY));
+                obj = new JSONObject(decryptOpenSslNative(data, KEY));
             } else {
-                return json;
+                obj = json;
             }
+            saveNotice(obj);
+            return obj;
         } catch (Exception e) {
             e.printStackTrace();
             return new JSONObject();
+        }
+    }
+
+    // 保存公告内容与强制更新开关（仅成功获取远程数据时调用，失败保留旧值）
+    private static void saveNotice(JSONObject json) {
+        try {
+            Setting.putNotice(json.optString("notice"));
+            Setting.putNoticeSwitch("y".equalsIgnoreCase(json.optString("mandatoryUpdate")));
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
     }
 

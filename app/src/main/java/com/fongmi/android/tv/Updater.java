@@ -4,6 +4,7 @@ import android.view.View;
 
 import androidx.fragment.app.FragmentActivity;
 
+import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.UpdateListener;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.dialog.UpdateDialog;
@@ -61,6 +62,8 @@ public class Updater implements Download.Callback, UpdateListener {
 
     private void check(FragmentActivity activity) {
         try {
+            // 公告数据已在 API2018K.getData() 中保存，通知界面刷新公告
+            RefreshEvent.notice();
             if (!API2018K.hasUpdate(BuildConfig.VERSION_NAME)) return;
             String name = API2018K.getVersion();
             String desc = API2018K.getVersionInfo();

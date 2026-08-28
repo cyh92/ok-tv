@@ -38,6 +38,16 @@
             android:textColor="@color/white"
             android:textSize="24sp" />
 
+        <com.fongmi.android.tv.ui.custom.MarqueeTextView
+            android:id="@+id/notice"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="16dp"
+            android:layout_weight="2"
+            android:text="短文字测试滚动效果"
+            android:textColor="@color/white"
+            android:textSize="18sp"/>
+
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/clock"
             android:layout_width="wrap_content"

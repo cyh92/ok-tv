@@ -137,6 +137,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         initConfig();
         setTitle();
         setLogo();
+        setNotice();
     }
 
     @Override
@@ -352,6 +353,13 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         ImgUtil.logo(mBinding.logo);
     }
 
+    private void setNotice() {
+        String text = Setting.getNotice();
+        boolean show = Setting.getNoticeSwitch() && !TextUtils.isEmpty(text);
+        mBinding.notice.setText(text);
+        mBinding.notice.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onConfigEvent(ConfigEvent event) {
         switch (event.type()) {
@@ -376,6 +384,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 getVideo();
                 setTitle();
                 setHomeUI();
+                break;
+            case NOTICE:
+                setNotice();
                 break;
             case HISTORY:
                 getHistory();

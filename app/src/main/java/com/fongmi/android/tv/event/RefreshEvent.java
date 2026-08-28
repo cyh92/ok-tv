@@ -14,6 +14,10 @@ public class RefreshEvent {
         EventBus.getDefault().post(new RefreshEvent(Type.HOME));
     }
 
+    public static void notice() {
+        EventBus.getDefault().post(new RefreshEvent(Type.NOTICE));
+    }
+
     public static void category() {
         EventBus.getDefault().post(new RefreshEvent(Type.CATEGORY));
     }
@@ -85,6 +89,6 @@ public class RefreshEvent {
     }
 
     public enum Type {
-        HOME, CATEGORY, HISTORY, KEEP, SIZE, THEME, LIVE, DETAIL, PLAYER, SUBTITLE, DANMAKU, VOD
+        HOME, NOTICE, CATEGORY, HISTORY, KEEP, SIZE, THEME, LIVE, DETAIL, PLAYER, SUBTITLE, DANMAKU, VOD
     }
 }

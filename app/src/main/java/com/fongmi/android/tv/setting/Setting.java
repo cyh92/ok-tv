@@ -167,4 +167,18 @@ public class Setting {
     public static int getHomeUI() {
         return Prefers.getInt("home_ui", 0);
     }
+    //公告滚动文字
+    public static void putNotice(String text) {
+        Prefers.put("notice_text", text);
+    }
+    public static String getNotice() {
+        return Prefers.getString("notice_text");
+    }
+    //公告开关
+    public static void putNoticeSwitch(boolean o) {
+        Prefers.put("notice_switch", o);
+    }
+    public static boolean getNoticeSwitch() {
+        return Prefers.getBoolean("notice_switch", false);
+    }
 }
