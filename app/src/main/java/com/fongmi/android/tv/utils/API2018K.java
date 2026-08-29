@@ -4,6 +4,7 @@ import android.util.Base64;
 
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.api.Decoder;
+import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.setting.Setting;
 import com.github.catvod.net.OkHttp;
 
@@ -23,21 +24,58 @@ public class API2018K {
     private static final String ID = "68D9D8C218894DC68ECDF51C42330869";
     private static final String KEY = BuildConfig.OPEN_ID;
     private static JSONObject cache;
+    private static long cacheTime;
+    private static boolean autoStarted;
+    // 缓存有效期：6 小时内直接复用，过期后自动重新请求获取后台最新数据（可按需调整）
+    private static final long CACHE_TTL = 6 * 60 * 60 * 1000L;
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final android.os.Handler HANDLER = new android.os.Handler(android.os.Looper.getMainLooper());
 
-    // 异步加载数据（必须先调用）
+    // 周期自动刷新任务：每 CACHE_TTL 重新拉取一次后台数据，保证后台参数修改后 app 内能更新
+    private static final Runnable REFRESH_TASK = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                init(null);
+            } finally {
+                HANDLER.postDelayed(this, CACHE_TTL);
+            }
+        }
+    };
+
+    // 异步加载数据（必须先调用）。cache 未过期时直接返回缓存，过期后自动重新拉取最新数据
     public static void init(OnDataListener listener) {
-        if (cache != null) {
+        if (cache != null && System.currentTimeMillis() - cacheTime < CACHE_TTL) {
             if (listener != null) listener.onResult(cache);
             return;
         }
         EXECUTOR.execute(() -> {
             JSONObject result = getData();
-            cache = result;
+            // 请求失败返回空对象时不覆盖旧缓存，避免断网时丢失已有数据
+            if (result != null && result.length() > 0) {
+                cache = result;
+                cacheTime = System.currentTimeMillis();
+                startAutoRefresh();
+                // 数据已更新，通知界面刷新公告等
+                RefreshEvent.notice();
+            }
             if (listener != null) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> listener.onResult(result));
             }
         });
+    }
+
+    // 启动周期自动刷新（仅启动一次），让后台参数修改后 app 内能自动更新
+    private static void startAutoRefresh() {
+        if (autoStarted) return;
+        autoStarted = true;
+        HANDLER.postDelayed(REFRESH_TASK, CACHE_TTL);
+    }
+
+    // 强制刷新：清空缓存后立即重新请求，马上获取后台最新数据
+    public static void refresh(OnDataListener listener) {
+        clearCache();
+        init(listener);
     }
 
     public static JSONObject getData() {
