@@ -89,6 +89,100 @@ public class Ku9Bridge {
         Log.d("Ku9", msg == null ? "null" : msg);
     }
 
+    // ---------- 新增：响应头 ----------
+
+    @JavascriptInterface
+    public String getHeaders(String url, String headers, boolean followRedirects, String method, String body) {
+        return Ku9HttpClient.getHeaders(url, headers, followRedirects, method, body).toString();
+    }
+
+    // ---------- 新增：哈希 ----------
+
+    @JavascriptInterface
+    public String sha1(String value) {
+        return Ku9Util.sha1(value);
+    }
+
+    @JavascriptInterface
+    public String sha256(String value) {
+        return Ku9Util.sha256(value);
+    }
+
+    @JavascriptInterface
+    public String sha512(String value) {
+        return Ku9Util.sha512(value);
+    }
+
+    // ---------- 新增：OpenSSL ----------
+
+    @JavascriptInterface
+    public String opensslEncrypt(String data, String type, String key, double outputType, String iv) {
+        return Ku9Util.opensslEncrypt(data, type, key, outputType, iv);
+    }
+
+    @JavascriptInterface
+    public String opensslDecrypt(String data, String type, String key, double inputType, String iv) {
+        return Ku9Util.opensslDecrypt(data, type, key, inputType, iv);
+    }
+
+    // ---------- 新增：RC4 ----------
+
+    @JavascriptInterface
+    public String rc4Encrypt(String data, String key, double inputFormat, double outputFormat, String charset) {
+        return Ku9Util.rc4Encrypt(data, key, inputFormat, outputFormat, charset);
+    }
+
+    @JavascriptInterface
+    public String rc4Decrypt(String data, String key, double inputFormat, double outputFormat, String charset) {
+        return Ku9Util.rc4Decrypt(data, key, inputFormat, outputFormat, charset);
+    }
+
+    // ---------- 新增：Base64 ----------
+
+    @JavascriptInterface
+    public String encodeBase64(String value) {
+        return Ku9Util.encodeBase64(value);
+    }
+
+    @JavascriptInterface
+    public String decodeBase64(String value) {
+        return Ku9Util.decodeBase64(value);
+    }
+
+    // ---------- 新增：类型判断 ----------
+
+    @JavascriptInterface
+    public boolean isBase64(String value) {
+        return Ku9Util.isBase64(value);
+    }
+
+    @JavascriptInterface
+    public boolean isJsonObject(String value) {
+        return Ku9Util.isJsonObject(value);
+    }
+
+    @JavascriptInterface
+    public boolean isJsonArray(String value) {
+        return Ku9Util.isJsonArray(value);
+    }
+
+    // ---------- 新增：时间 ----------
+
+    @JavascriptInterface
+    public String toTimestamp(String dateStr, String inputFormat, String timezone) {
+        return Ku9Util.toTimestamp(dateStr, inputFormat, timezone);
+    }
+
+    @JavascriptInterface
+    public String toDate(double timestamp, String outputFormat, String timezone) {
+        return Ku9Util.toDate(timestamp, outputFormat, timezone);
+    }
+
+    @JavascriptInterface
+    public String formatDateTime(String dateStr, String inputFormat, String outputFormat, double daysOffset, String inputTimezone, String outputTimezone) {
+        return Ku9Util.formatDateTime(dateStr, inputFormat, outputFormat, daysOffset, inputTimezone, outputTimezone);
+    }
+
     private String cacheKey(String key) {
         return "k_" + Ku9HttpClient.md5(key);
     }

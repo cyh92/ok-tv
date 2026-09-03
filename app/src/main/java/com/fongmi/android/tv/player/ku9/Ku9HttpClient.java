@@ -97,6 +97,42 @@ public class Ku9HttpClient {
         return result;
     }
 
+    /** 发起请求并返回 {code, url, headers}，不读取响应体（仅用于取响应头）。 */
+    public static JSONObject getHeaders(String url, String headersJson, boolean followRedirects, String method, String body) {
+        JSONObject result = new JSONObject();
+        try {
+            OkHttpClient client = OkHttp.client(followRedirects, TIMEOUT);
+            Request.Builder builder = new Request.Builder().url(url);
+            Map<String, String> headers = parseHeaders(headersJson);
+            for (Map.Entry<String, String> entry : headers.entrySet()) builder.header(entry.getKey(), entry.getValue());
+            String m = method == null ? "GET" : method.trim().toUpperCase(Locale.ROOT);
+            if ("GET".equals(m) || "HEAD".equals(m)) {
+                builder.method(m, null);
+            } else {
+                builder.method(m, RequestBody.create(body == null ? "" : body, mediaType(headers)));
+            }
+            try (Response response = client.newCall(builder.build()).execute()) {
+                result.put("code", response.code());
+                result.put("url", response.request().url().toString());
+                JSONObject hs = new JSONObject();
+                Headers responseHeaders = response.headers();
+                for (int i = 0; i < responseHeaders.size(); i++) {
+                    String name = responseHeaders.name(i);
+                    if (!hs.has(name)) hs.put(name, responseHeaders.value(i));
+                }
+                result.put("headers", hs);
+            }
+        } catch (Throwable e) {
+            try {
+                result.put("code", 0);
+                result.put("url", url == null ? "" : url);
+                result.put("error", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            } catch (Exception ignored) {
+            }
+        }
+        return result;
+    }
+
     public static Map<String, String> parseHeaders(String json) {
         Map<String, String> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         if (json == null || json.isEmpty()) return map;

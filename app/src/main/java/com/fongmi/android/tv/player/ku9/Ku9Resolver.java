@@ -16,6 +16,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,6 +49,12 @@ public class Ku9Resolver {
     private static final int REFRESH_FAIL_MS = 5_000;
     private static final String BASE_URL = "https://ku9.local/";
     private static final String PAGE = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body></body></html>";
+    private static final String TEMPLATE_ASSET = "js/ku9.js";
+    private static final String SCRIPT_TAG = "/*__KU9_SCRIPT__*/";
+    private static final String ITEM_TAG = "/*__KU9_ITEM__*/";
+
+    /** 注入模板缓存（assets 内容固定，进程内只读一次）。 */
+    private static volatile String template;
 
     private final Handler handler;
     private final Ku9Bridge bridge;
@@ -343,34 +352,43 @@ public class Ku9Resolver {
 
     // ---------- JS 注入 ----------
 
+    /** 读取 assets/js/ku9.js 注入模板（进程内缓存）。 */
+    private static String loadTemplate() {
+        String t = template;
+        if (t == null) {
+            synchronized (Ku9Resolver.class) {
+                if ((t = template) == null) {
+                    try (InputStream input = App.get().getAssets().open(TEMPLATE_ASSET)) {
+                        t = readAll(input);
+                    } catch (IOException e) {
+                        throw new IllegalStateException("读取 ku9 注入模板失败: " + TEMPLATE_ASSET, e);
+                    }
+                    template = t;
+                }
+            }
+        }
+        return t;
+    }
+
+    private static String readAll(InputStream input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int len;
+        while ((len = input.read(buffer)) > 0) output.write(buffer, 0, len);
+        return output.toString("UTF-8");
+    }
+
+    /** 将模板中的占位符替换为用户脚本与 item，切分拼接以避免简单 replace 的误替换。 */
     private String buildJavascript(Request request) {
-        return "(function(){\n"
-                + "function headerJson(v){if(typeof v!=='string'){try{return JSON.stringify(v||{});}catch(e){return '{}';}}return v;}\n"
-                + "function parseJson(v,d){try{return JSON.parse(v);}catch(e){return d;}}\n"
-                + "window.ku9={\n"
-                + "  get:function(u,h){return ku9Bridge.get(String(u),headerJson(h));},\n"
-                + "  post:function(u,b,h){return ku9Bridge.post(String(u),b==null?'':String(b),headerJson(h));},\n"
-                + "  request:function(u,m,h,b,f){var v=ku9Bridge.request(String(u),m==null?'GET':String(m),headerJson(h),b==null?'':String(b),f!==false);return parseJson(v,{});},\n"
-                + "  getQuery:function(u,n){try{var ps=(String(u).split('?')[1]||'').split('&'),r={},i,k;for(i=0;i<ps.length;i++){k=ps[i].split('=');if(k[0])r[decodeURIComponent(k[0])]=decodeURIComponent(k[1]||'');}return n===undefined?r:(r[String(n)]||'');}catch(e){return n===undefined?{}:'';}},\n"
-                + "  getCache:function(k){return ku9Bridge.getCache(String(k));},\n"
-                + "  setCache:function(k,v,t){ku9Bridge.setCache(String(k),v==null?'':String(v),Number(t)||0);},\n"
-                + "  md5:function(v){return ku9Bridge.md5(String(v));},\n"
-                + "  log:function(v){ku9Bridge.log(String(v));}\n"
-                + "};\n"
-                + "if(!String.prototype.startsWith){Object.defineProperty(String.prototype,'startsWith',{value:function(s){return this.indexOf(String(s))===0;}});}\n"
-                + "if(!String.prototype.endsWith){Object.defineProperty(String.prototype,'endsWith',{value:function(s){var t=String(s);return this.lastIndexOf(t)===this.length-t.length;}});}\n"
-                + "if(!String.prototype.includes){Object.defineProperty(String.prototype,'includes',{value:function(s){return this.indexOf(String(s))!==-1;}});}\n"
-                + "if(!Array.prototype.includes){Object.defineProperty(Array.prototype,'includes',{value:function(v){return this.indexOf(v)!==-1;}});}\n"
-                + "function done(v){if(v===undefined||v===null)v='';try{ku9Bridge.complete(JSON.stringify(v));}catch(e){ku9Bridge.fail(String(e&&e.stack?e.stack:e));}}\n"
-                + "function fail(e){ku9Bridge.fail(String(e&&e.stack?e.stack:e));}\n"
-                + "try{\n"
+        String shell = loadTemplate();
+        int i = shell.indexOf(SCRIPT_TAG);
+        int j = shell.indexOf(ITEM_TAG);
+        if (i < 0 || j < 0 || i > j) throw new IllegalStateException("ku9.js 模板缺少占位符");
+        return shell.substring(0, i)
                 + request.script
-                + "\nif(typeof main!=='function'){throw new Error('script no main(item)');}\n"
-                + "var __item=" + request.item + ";\n"
-                + "var __result=main(__item);\n"
-                + "if(__result&&typeof __result.then==='function'){__result.then(done).catch(fail);}else{done(__result);}\n"
-                + "}catch(e){fail(e);}\n"
-                + "})();";
+                + shell.substring(i + SCRIPT_TAG.length(), j)
+                + request.item
+                + shell.substring(j + ITEM_TAG.length());
     }
 
     private static class Request {
