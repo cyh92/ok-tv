@@ -188,7 +188,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.control.action.scale.setOnClickListener(view -> onScale());
         mBinding.control.action.speed.setOnClickListener(view -> onSpeed());
         mBinding.control.action.config.setOnClickListener(view -> onConfig());
-        mBinding.control.action.action.setOnClickListener(view -> onAction());
+        mBinding.control.action.toggle.setOnClickListener(view -> onAction());
         mBinding.control.action.invert.setOnClickListener(view -> onInvert());
         mBinding.control.action.across.setOnClickListener(view -> onAcross());
         mBinding.control.action.change.setOnClickListener(view -> onChange());
@@ -521,7 +521,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void updatePlayControl(boolean isPlaying) {
-        mBinding.control.action.action.setText(isPlaying ? R.string.pause : R.string.play);
+        mBinding.control.action.toggle.setText(isPlaying ? R.string.pause : R.string.play);
     }
 
     @Override
@@ -588,7 +588,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void hideCenter() {
-        mBinding.widget.action.setImageResource(R.drawable.ic_widget_play);
+        mBinding.widget.centerIcon.setImageResource(R.drawable.ic_widget_play);
         mBinding.widget.center.setVisibility(View.GONE);
     }
 
@@ -788,7 +788,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 //        startPlayer(mPlaybackKey = result.getRealUrl(), result, false, getHome().getTimeout(), position, metadata);
 
         mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
-        mBinding.control.action.action.setVisibility(result.getParse() == 2  ? View.GONE : View.VISIBLE);//直播时隐藏控制按钮
+        mBinding.control.action.toggle.setVisibility(result.getParse() == 2  ? View.GONE : View.VISIBLE);//直播时隐藏控制按钮
         if (result.getParse() == 2) {
             Logger.t("LiveActivity").d("切换到WebView模式");
             showWebView(result);
@@ -974,7 +974,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     private void setTrackVisible() {
         PlaybackAction.setTracks(player(), mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video, mBinding.control.action.speed);
         mBinding.control.seek.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏进度条
-        mBinding.control.action.action.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏控制
+        mBinding.control.action.toggle.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏控制
     }
 
     private void prevChannel() {
@@ -1046,7 +1046,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.widget.center.setVisibility(View.VISIBLE);
         mBinding.widget.duration.setText(player().getDurationTime());
         mBinding.widget.position.setText(player().getPositionTime(time));
-        mBinding.widget.action.setImageResource(time > 0 ? R.drawable.ic_widget_forward : R.drawable.ic_widget_rewind);
+        mBinding.widget.centerIcon.setImageResource(time > 0 ? R.drawable.ic_widget_forward : R.drawable.ic_widget_rewind);
         hideProgress();
     }
 

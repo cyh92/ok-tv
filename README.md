@@ -1,3 +1,58 @@
+# 修改：修复 LiveActivity 进程重建崩溃（ClassCastException）
+
+## 问题现象
+
+直播播放一段时间后，切后台被系统回收进程，再回到 LiveActivity 时崩溃：
+
+```
+java.lang.ClassCastException: android.view.AbsSavedState$1 cannot be cast
+    to android.widget.HorizontalScrollView$SavedState
+  at HorizontalScrollView.onRestoreInstanceState(HorizontalScrollView.java:1827)
+  ...
+  at ActivityThread.handleStartActivity
+```
+
+## 根因
+
+View 状态保存/恢复按 `id` 匹配。`R.id.action` 在 leanback 版直播页布局中被同时用在两个**父子关系**的 View 上：
+
+1. `view_control_live.xml` 通过 `<include android:id="@+id/action" layout="@layout/view_control_live_action"/>`，把 include 的 id 覆盖到被 include 布局根元素 `HorizontalScrollView` 上；
+2. `view_control_live_action.xml` 内部那个播放/暂停按钮 `MaterialTextView` 也声明了 `android:id="@+id/action"`。
+
+保存状态时，ViewGroup 先存父 `HorizontalScrollView` 的 `SavedState`，再遍历子 `MaterialTextView`，子 View 把自己的空状态 `AbsSavedState$1` 以同一个 id 覆盖写入；恢复时 `HorizontalScrollView.onRestoreInstanceState` 拿到的是子 View 的空状态，强转 `HorizontalScrollView$SavedState` 失败，崩溃。
+
+类似地，`view_widget_*.xml` 里中央播放按钮 `ImageView` 也叫 `@+id/action`，与控制栏 include 的 id 跨分支重复，属同类隐患，一并清理。
+
+## 改动清单
+
+### 1. 消除父子 View id 冲突（直接修复崩溃）
+
+| 文件 | 改动 |
+|---|---|
+| `app/src/leanback/res/layout/view_control_live_action.xml` | 内部播放/暂停按钮 id `@+id/action` → `@+id/toggle` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 4 处 `mBinding.control.action.action` → `mBinding.control.action.toggle` |
+
+### 2. 清理 widget 中央图标与控制栏跨分支同 id 隐患
+
+| 文件 | 改动 |
+|---|---|
+| `app/src/leanback/res/layout/view_widget_live.xml` | ImageView id `action` → `centerIcon` |
+| `app/src/leanback/res/layout/view_widget_vod.xml` | ImageView id `action` → `centerIcon` |
+| `app/src/leanback/res/layout/view_widget_cast.xml` | ImageView id `action` → `centerIcon` |
+| `app/src/mobile/res/layout/view_widget_live.xml` | ImageView id `action` → `centerIcon` |
+| `app/src/mobile/res/layout/view_widget_vod.xml` | ImageView id `action` → `centerIcon` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 2 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/CastActivity.java` | 2 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java` | 2 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
+| `app/src/mobile/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 1 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
+| `app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java` | 1 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
+
+## 验证方式
+
+重新编译安装后，复现路径：进入直播页播放一段时间 → 按 Home 切后台 → 用 `adb shell am kill <包名>` 或等待系统回收进程 → 重新打开直播页，应不再崩溃。
+
+---
+
 # 開發者文件
 
 基於 [CatVod](https://github.com/CatVodTVOfficial/CatVodTVJarLoader) 的開源 Android 影音應用程式，同時支援 **Android TV 大螢幕**與**手機**兩種使用情境，並且透過外部配置靈活擴展內容。
