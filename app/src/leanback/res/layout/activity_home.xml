@@ -74,7 +74,8 @@
         android:listSelector="@null"
         app:focusOutEnd="false"
         app:focusOutFront="false"
-        tools:visibility="visible" />
+        tools:visibility="visible" 
+        android:saveEnabled="false"/>
     <com.fongmi.android.tv.ui.custom.ProgressLayout
         android:id="@+id/progressLayout"
         android:layout_width="match_parent"
