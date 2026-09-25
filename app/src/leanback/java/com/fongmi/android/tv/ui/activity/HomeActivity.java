@@ -499,6 +499,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && getCurrentFocus() == mBinding.title) return mBinding.recycler.getChildAt(0).requestFocus();
 
         if (KeyUtil.isActionDown(event) && KeyUtil.isDigitKey(event))LiveActivity.start(this);//主页面按任意数字键进入直播
+        if (KeyUtil.isActionDown(event) & KeyUtil.isUpKey(event) && mBinding.typeRecycler.getVisibility() == View.VISIBLE && mBinding.recycler.getSelectedPosition() == 0) return mBinding.typeRecycler.requestFocus();
         if (KeyUtil.isActionDown(event) & KeyUtil.isUpKey(event) && mBinding.typeRecycler.hasFocus()) return requestTitleFocus();
         if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && mBinding.typeRecycler.hasFocus()) return requestContentFocus();
         if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && getCurrentFocus() == mBinding.title) return requestHomeFocus();
