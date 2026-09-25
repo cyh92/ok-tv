@@ -50,7 +50,7 @@ public class Ku9ScriptLoader {
         if (remote == null) {
             String cached = readFile(file);
             if (cached != null) return cached;
-            throw new IOException("下载酷9脚本失败: " + url);
+            throw new IOException("下载JS脚本失败: " + url);
         }
         writeFile(file, remote);
         return remote;

@@ -79,12 +79,12 @@ public class Ku9Resolver {
 
     /** 同步阻塞解析，返回可播放地址；失败抛 ExtractException。 */
     public String fetch(String sourceUrl) throws Exception {
-        if (sourceUrl == null || sourceUrl.isEmpty()) throw new ExtractException("酷9源地址为空");
-        if (!sourceUrl.startsWith("http://") && !sourceUrl.startsWith("https://")) throw new ExtractException("酷9脚本地址必须以 http(s) 开头");
+        if (sourceUrl == null || sourceUrl.isEmpty()) throw new ExtractException("源地址为空");
+        if (!sourceUrl.startsWith("http://") && !sourceUrl.startsWith("https://")) throw new ExtractException("JS脚本地址必须以 http(s) 开头");
         final int gen = next();
         String script = Ku9ScriptLoader.get().load(sourceUrl);
         ensureWebView();
-        if (gen != generation) throw new ExtractException("酷9任务已取消");
+        if (gen != generation) throw new ExtractException("任务已取消");
         JSONObject item = new JSONObject();
         item.put("url", sourceUrl);
         item.put("name", "");
@@ -92,11 +92,11 @@ public class Ku9Resolver {
         startExecution(request);
         if (!request.latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
             if (gen == generation) current = null;
-            throw new ExtractException("酷9脚本执行超时: " + sourceUrl);
+            throw new ExtractException("JS脚本执行超时: " + sourceUrl);
         }
-        if (gen != generation || current != request) throw new ExtractException("酷9任务已取消");
+        if (gen != generation || current != request) throw new ExtractException("任务已取消");
         if (request.error != null) throw new ExtractException(request.error);
-        if (request.value == null) throw new ExtractException("酷9脚本未返回结果");
+        if (request.value == null) throw new ExtractException("JS脚本未返回结果");
         return resolve(request, request.value);
     }
 
@@ -266,12 +266,12 @@ public class Ku9Resolver {
             }
             value = text;
         }
-        if (!(value instanceof String)) throw new ExtractException("酷9脚本未返回可播放地址");
+        if (!(value instanceof String)) throw new ExtractException("JS脚本未返回可播放地址");
         String text = ((String) value).trim();
-        if (text.isEmpty()) throw new ExtractException("酷9脚本返回空地址");
+        if (text.isEmpty()) throw new ExtractException("JS脚本返回空地址");
         if (text.startsWith("#EXTM3U")) return startPlaylist(request, text);
         if (text.startsWith("http://") || text.startsWith("https://")) return text;
-        throw new ExtractException("酷9无法识别的播放地址: " + shorten(text));
+        throw new ExtractException("无法识别JS返回的播放地址: " + shorten(text));
     }
 
     private String startPlaylist(Request request, String content) throws Exception {
