@@ -15,13 +15,13 @@ public class Ku9 implements Source.Extractor {
 
     @Override
     public String fetch(String url) throws Exception {
-        if (url == null || !url.regionMatches(true, 0, "ku9://", 0, 6)) throw new ExtractException("无效的JS地址: " + url);
-        return Ku9Resolver.get().fetch(url.substring(6));
+        if (url == null || !url.regionMatches(true, 0, "js://", 0, 5)) throw new ExtractException("无效的JS地址: " + url);
+        return Ku9Resolver.get().fetch(url.substring(5));
     }
 
     @Override
     public boolean match(Uri uri) {
-        return "ku9".equals(UrlUtil.scheme(uri));
+        return "js".equals(UrlUtil.scheme(uri));
     }
 
     @Override

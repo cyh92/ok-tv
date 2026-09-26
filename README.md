@@ -1,3 +1,62 @@
+# 修改：修复播放中系统分辨率切换导致播放器重建
+
+## 问题现象
+
+直播/点播播放一段时间后，画面突然重新加载（mediaPos 归零），日志显示：
+
+```
+initScaledDensity = 1.3312501 on ConfigurationChanged
+PLAYLIST_CHANGED, pos=44060 -> pos=0
+MediaController Release
+```
+
+## 根因
+
+Rockchip TV 盒子播放过程中系统自动切换 HDMI 输出模式，触发 ConfigurationChanged（density 变化）。原 manifest 中 configChanges 未包含 density 等配置类型，导致 Activity 被销毁重建，SurfaceView surface 销毁，ExoPlayer 被迫 Release 并重新加载播放列表。
+
+## 改动
+
+`app/src/leanback/AndroidManifest.xml` 中 LiveActivity、VideoActivity 等播放页面的 `configChanges` 补全为：
+
+```
+mcc|mnc|locale|layoutDirection|screenSize|smallestScreenSize|screenLayout|uiMode|orientation|keyboard|keyboardHidden|navigation|density|fontScale
+```
+
+任何系统配置变化都由 Activity 自行处理，不重建，播放器不中断。
+
+## 验证
+
+播放直播约 1 小时以上，不应再出现画面重新加载。
+
+---
+
+# 修改：ku9 动态 m3u8 过期保护
+
+## 问题现象
+
+ku9 解析的直播源播放一段时间后，画面卡在"正在加载"但声音正常，不自动恢复。
+
+## 根因
+
+ku9 脚本返回 `#EXTM3U` 时启动本地 `Ku9PlaylistServer`，ExoPlayer 播的是 `http://127.0.0.1:port/live.m3u8`，分片列表由脚本每 2-5 秒刷新。当分片 URL 的 token 过期（约 58 分钟）后，脚本虽然每 2-5 秒在执行，但返回的 m3u8 内容不再变化（分片 URL 停滞），ExoPlayer 一直请求过期分片进入 BUFFERING，音频已缓冲够了继续播放，无超时重连。
+
+## 改动
+
+只改 `app/src/main/java/com/fongmi/android/tv/player/ku9/Ku9PlaylistServer.java`：
+
+- `update()` 时计算 m3u8 内容 MD5，与上次比较
+- 正常直播流每次刷新 m3u8 都有新分片出现，内容必然变化
+- 如果连续 **6 次**（约 15-30 秒）update 内容完全相同，判定分片列表停滞，ExoPlayer 请求 m3u8 时返回 **HTTP 503**
+- ExoPlayer 报错后走 `LivePlaybackController.playbackError` -> 自动切下一条线路重连
+
+不动 LiveActivity、WebViewPlayer 等原有代码。
+
+## 验证
+
+ku9 直播播放约 1 小时分片过期后，应在 30 秒内报错并自动切源，不再卡在加载画面。
+
+---
+
 # 修改：修复 LiveActivity 进程重建崩溃（ClassCastException）
 
 ## 问题现象
@@ -29,27 +88,27 @@ View 状态保存/恢复按 `id` 匹配。`R.id.action` 在 leanback 版直播�
 
 | 文件 | 改动 |
 |---|---|
-| `app/src/leanback/res/layout/view_control_live_action.xml` | 内部播放/暂停按钮 id `@+id/action` → `@+id/toggle` |
-| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 4 处 `mBinding.control.action.action` → `mBinding.control.action.toggle` |
+| `app/src/leanback/res/layout/view_control_live_action.xml` | 内部播放/暂停按钮 id `@+id/action` -> `@+id/toggle` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 4 处 `mBinding.control.action.action` -> `mBinding.control.action.toggle` |
 
 ### 2. 清理 widget 中央图标与控制栏跨分支同 id 隐患
 
 | 文件 | 改动 |
 |---|---|
-| `app/src/leanback/res/layout/view_widget_live.xml` | ImageView id `action` → `centerIcon` |
-| `app/src/leanback/res/layout/view_widget_vod.xml` | ImageView id `action` → `centerIcon` |
-| `app/src/leanback/res/layout/view_widget_cast.xml` | ImageView id `action` → `centerIcon` |
-| `app/src/mobile/res/layout/view_widget_live.xml` | ImageView id `action` → `centerIcon` |
-| `app/src/mobile/res/layout/view_widget_vod.xml` | ImageView id `action` → `centerIcon` |
-| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 2 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
-| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/CastActivity.java` | 2 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
-| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java` | 2 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
-| `app/src/mobile/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 1 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
-| `app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java` | 1 处 `mBinding.widget.action` → `mBinding.widget.centerIcon` |
+| `app/src/leanback/res/layout/view_widget_live.xml` | ImageView id `action` -> `centerIcon` |
+| `app/src/leanback/res/layout/view_widget_vod.xml` | ImageView id `action` -> `centerIcon` |
+| `app/src/leanback/res/layout/view_widget_cast.xml` | ImageView id `action` -> `centerIcon` |
+| `app/src/mobile/res/layout/view_widget_live.xml` | ImageView id `action` -> `centerIcon` |
+| `app/src/mobile/res/layout/view_widget_vod.xml` | ImageView id `action` -> `centerIcon` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 2 处 `mBinding.widget.action` -> `mBinding.widget.centerIcon` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/CastActivity.java` | 2 处 `mBinding.widget.action` -> `mBinding.widget.centerIcon` |
+| `app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java` | 2 处 `mBinding.widget.action` -> `mBinding.widget.centerIcon` |
+| `app/src/mobile/java/com/fongmi/android/tv/ui/activity/LiveActivity.java` | 1 处 `mBinding.widget.action` -> `mBinding.widget.centerIcon` |
+| `app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java` | 1 处 `mBinding.widget.action` -> `mBinding.widget.centerIcon` |
 
 ## 验证方式
 
-重新编译安装后，复现路径：进入直播页播放一段时间 → 按 Home 切后台 → 用 `adb shell am kill <包名>` 或等待系统回收进程 → 重新打开直播页，应不再崩溃。
+重新编译安装后，复现路径：进入直播页播放一段时间 -> 按 Home 切后台 -> 用 `adb shell am kill <包名>` 或等待系统回收进程 -> 重新打开直播页，应不再崩溃。
 
 ---
 
@@ -115,7 +174,7 @@ TV/
 
 - 多站點分類瀏覽，Filter 篩選（年份 / 地區 / 類型等）
 - 多站點**並行搜尋**，關鍵字自動繁轉簡提升相容性
-- 播放失敗自動換源：解析器 → 線路 → 搜尋其他站 → 下一站點
+- 播放失敗自動換源：解析器 -> 線路 -> 搜尋其他站 -> 下一站點
 - 觀看記錄（保留 60 天）、收藏、無痕模式
 - 電視版使用遙控器操作；手機版支援手勢（亮度 / 音量 / 進度）、上下滑切集、螢幕旋轉與鎖定
 

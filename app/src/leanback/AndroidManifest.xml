@@ -98,7 +98,7 @@
         </activity>
         <activity
             android:name=".ui.activity.CastActivity"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|uiMode|orientation"
+            android:configChanges="mcc|mnc|locale|layoutDirection|screenSize|smallestScreenSize|screenLayout|uiMode|orientation|keyboard|keyboardHidden|navigation|density|fontScale"
             android:exported="true"
             android:launchMode="singleTop"
             android:screenOrientation="sensorLandscape">
@@ -114,14 +114,14 @@
             android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".ui.activity.LiveActivity"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|uiMode|orientation"
+            android:configChanges="mcc|mnc|locale|layoutDirection|screenSize|smallestScreenSize|screenLayout|uiMode|orientation|keyboard|keyboardHidden|navigation|density|fontScale"
             android:exported="true"
             android:launchMode="singleTop"
             android:parentActivityName=".ui.activity.HomeActivity"
             android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".ui.activity.VideoActivity"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|uiMode|orientation|keyboard|keyboardHidden|navigation"
+            android:configChanges="mcc|mnc|locale|layoutDirection|screenSize|smallestScreenSize|screenLayout|uiMode|orientation|keyboard|keyboardHidden|navigation|density|fontScale"
             android:launchMode="singleTop"
             android:parentActivityName=".ui.activity.HomeActivity"
             android:screenOrientation="sensorLandscape" />
