@@ -29,7 +29,8 @@ public class OkAuthenticator implements Authenticator {
     public Request authenticate(@Nullable Route route, @NonNull Response response) {
         if (route == null || response.request().header(HttpHeaders.PROXY_AUTHORIZATION) != null) return null;
         if (!(route.proxy().address() instanceof InetSocketAddress proxyAddress)) return null;
-        String userInfo = findUserInfo(response.request().url().host(), proxyAddress.getHostName());
+        Proxy redirectRule = selector.getRedirectRule(response.request().url().uri(), route.proxy());
+        String userInfo = redirectRule != null ? redirectRule.getUserInfo(proxyAddress.getHostName(), "http") : findUserInfo(response.request().url().host(), proxyAddress.getHostName());
         return userInfo == null ? null : response.request().newBuilder().header(HttpHeaders.PROXY_AUTHORIZATION, Auth.basic(userInfo)).build();
     }
 
