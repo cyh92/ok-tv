@@ -33,6 +33,7 @@ public class Source {
         extractors.add(new Video());
         extractors.add(new WebView()); // 添加新解析器
         extractors.add(new Ku9()); // ku9:// 酷9脚本源
+        extractors.add(new Php()); // php:// 远程PHP脚本源
     }
 
     public static Source get() {
