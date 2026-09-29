@@ -90,7 +90,7 @@ public class Setting {
     }
 
     public static int getSiteMode() {
-        return Math.clamp(Prefers.getInt("site_mode"), MIN_SITE_MODE, MAX_SITE_MODE);
+        return Math.clamp(Prefers.getInt("site_mode",MAX_SITE_MODE), MIN_SITE_MODE, MAX_SITE_MODE);
     }
 
     public static void putSiteMode(int mode) {
