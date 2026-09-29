@@ -31,12 +31,12 @@ public class Php implements Source.Extractor {
 
     @Override
     public String fetch(String url) throws Exception {
-        if (url == null || !url.regionMatches(true, 0, "php://", 0, 5)) {
+        if (url == null || !url.regionMatches(true, 0, "php://", 0, 6)) {
             throw new ExtractException("无效的PHP地址: " + url);
         }
 
         // 去掉 php:// 前缀
-        String fullUrl = url.substring(5);
+        String fullUrl = url.substring(6);
 
         // 分离脚本地址和查询参数
         String scriptUrl;
