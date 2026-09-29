@@ -1,0 +1,6 @@
+# CMake 编译中间产物
+.cxx/
+.externalNativeBuild/
+
+# 编译输出
+build/
