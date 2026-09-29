@@ -71,6 +71,26 @@ public class PhpEnv {
     }
 
     /**
+     * 获取 php.ini 路径（确保环境已初始化）。
+     */
+    public static String getIniPath() {
+        if (instance == null || !instance.ready) {
+            throw new IllegalStateException("PHP 环境未初始化");
+        }
+        return instance.iniFile.getAbsolutePath();
+    }
+
+    /**
+     * 获取脚本存放目录。
+     */
+    public static File getScriptDir() {
+        if (instance == null || !instance.ready) {
+            throw new IllegalStateException("PHP 环境未初始化");
+        }
+        return instance.phpDir;
+    }
+
+    /**
      * 执行 PHP 脚本。
      *
      * @param scriptContent PHP 脚本内容

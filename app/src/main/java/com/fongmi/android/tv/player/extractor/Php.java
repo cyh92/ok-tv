@@ -1,33 +1,48 @@
 package com.fongmi.android.tv.player.extractor;
 
 import android.net.Uri;
+import android.util.Log;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.exception.ExtractException;
 import com.fongmi.android.tv.player.ku9.Ku9HttpClient;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.php.PhpEnv;
-
-import org.json.JSONObject;
-import org.json.JSONTokener;
+import com.fongmi.php.PhpServer;
 
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * php:// 远程PHP脚本源解析器。
+ * php:// 远程PHP脚本源。
  * 地址约定：php://{远程PHP脚本HTTP(S)地址}?{参数}
  *
  * 工作流程：
- * 1. 下载远程 PHP 脚本文本（不执行）
- * 2. 将 header("Location: ...") 重定向转换为 echo 输出（embed模式下header不被捕获）
- * 3. 在本地通过 PHP embed JNI 执行脚本
- * 4. 解析返回内容，提取播放地址
+ * 1. 下载远程 PHP 脚本文本（带缓存，同一脚本不重复下载）
+ * 2. 注册到本地 PHP 服务器
+ * 3. 返回 http://127.0.0.1:端口/xxx.php?参数
+ * 4. ExoPlayer 请求本地地址，服务器执行 PHP 脚本并 302 到 m3u8
  */
 public class Php implements Source.Extractor {
 
-    private static final String RESULT_PREFIX = "PHP_PLAY_URL:";
+    /** 脚本缓存过期时间：1小时 */
+    private static final long CACHE_TTL = 60 * 60 * 1000L;
+
+    /** 缓存条目：内容 + 下载时间 */
+    private static class CacheEntry {
+        final String content;
+        final long time;
+        CacheEntry(String content) {
+            this.content = content;
+            this.time = System.currentTimeMillis();
+        }
+        boolean expired() {
+            return System.currentTimeMillis() - time > CACHE_TTL;
+        }
+    }
+
+    /** 脚本内容缓存：脚本URL → 缓存条目 */
+    private static final ConcurrentHashMap<String, CacheEntry> scriptCache = new ConcurrentHashMap<>();
 
     @Override
     public String fetch(String url) throws Exception {
@@ -35,7 +50,6 @@ public class Php implements Source.Extractor {
             throw new ExtractException("无效的PHP地址: " + url);
         }
 
-        // 去掉 php:// 前缀
         String fullUrl = url.substring(6);
 
         // 分离脚本地址和查询参数
@@ -54,92 +68,38 @@ public class Php implements Source.Extractor {
             throw new ExtractException("PHP脚本地址必须以 http(s) 开头: " + scriptUrl);
         }
 
-        // 下载 PHP 脚本文本
-        String scriptContent = Ku9HttpClient.get(scriptUrl, null);
-        if (scriptContent == null || scriptContent.isEmpty()) {
-            throw new ExtractException("下载PHP脚本失败: " + scriptUrl);
-        }
+        // 初始化 PHP 环境
+        PhpEnv.get(App.get()).init();
 
-        // 将 header("Location: ...", true, 302) 转换为 echo 输出
-        String processedScript = convertRedirectToEcho(scriptContent);
-
-        // 在本地执行 PHP 脚本
-        String output = PhpEnv.get(App.get()).execute(processedScript, queryString);
-
-        if (output == null || output.trim().isEmpty()) {
-            throw new ExtractException("PHP脚本执行无输出");
-        }
-
-        return parseOutput(output.trim());
-    }
-
-    /**
-     * 将 header("Location: ...", true, 30X) 转换为 echo 输出。
-     * embed 模式下 header() 不会被捕获，需要转成 echo。
-     *
-     * 匹配模式：
-     *   header("Location: {$m3u8}", true, 302);
-     *   header("Location: " . $m3u8, true, 302);
-     *   header("Location: " . $url, true, 301);
-     */
-    private String convertRedirectToEcho(String script) {
-        // 匹配 header("Location: " . $variable, true, 30X);
-        Pattern pattern = Pattern.compile(
-                "header\\s*\\(\\s*[\"']Location:\\s*[\"']\\s*\\.\\s*\\$(\\w+)\\s*,\\s*true\\s*,\\s*30[1237]\\s*\\)\\s*;",
-                Pattern.DOTALL
-        );
-        Matcher matcher = pattern.matcher(script);
-        StringBuffer sb = new StringBuffer();
-        while (matcher.find()) {
-            matcher.appendReplacement(sb,
-                    "echo \"" + RESULT_PREFIX + "\" . $" + matcher.group(1) + ";");
-        }
-        matcher.appendTail(sb);
-        return sb.toString();
-    }
-
-    /**
-     * 解析 PHP 输出内容。
-     * 支持：
-     * 1. PHP_PLAY_URL:http://xxx.m3u8（转换后的重定向）
-     * 2. 纯 URL 文本
-     * 3. JSON {"url":"http://xxx.m3u8"}
-     * 4. #EXTM3U 内容（暂不支持）
-     */
-    private String parseOutput(String output) throws ExtractException {
-        // 1. 转换后的重定向输出
-        for (String line : output.split("\n")) {
-            line = line.trim();
-            if (line.startsWith(RESULT_PREFIX)) {
-                String url = line.substring(RESULT_PREFIX.length()).trim();
-                if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        // 下载 PHP 脚本文本（缓存1小时，过期重新下载）
+        CacheEntry entry = scriptCache.get(scriptUrl);
+        String scriptContent;
+        if (entry != null && !entry.expired()) {
+            scriptContent = entry.content;
+        } else {
+            scriptContent = Ku9HttpClient.get(scriptUrl, null);
+            if (scriptContent == null || scriptContent.isEmpty()) {
+                throw new ExtractException("下载PHP脚本失败: " + scriptUrl);
             }
+            scriptCache.put(scriptUrl, new CacheEntry(scriptContent));
         }
 
-        // 2. 纯 URL 文本
-        if (output.startsWith("http://") || output.startsWith("https://")) {
-            String firstLine = output.split("\n")[0].trim();
-            if (firstLine.startsWith("http://") || firstLine.startsWith("https://")) return firstLine;
-        }
+        // 用 URL 哈希作为脚本名，避免冲突
+        String scriptName = "script_" + Integer.toHexString(scriptUrl.hashCode()) + ".php";
 
-        // 3. JSON
+        // 注册到本地服务器并返回本地 URL
+        String localUrl = PhpServer.get().register(scriptName, scriptContent, queryString);
+
+        // 预热：先执行一次 PHP，确保 native 库和 cURL 已加载，避免 ExoPlayer 首次请求超时
         try {
-            Object value = new JSONTokener(output).nextValue();
-            if (value instanceof JSONObject) {
-                JSONObject json = (JSONObject) value;
-                String url = json.optString("url", json.optString("playUrl", json.optString("m3u8", "")));
-                if (!url.isEmpty()) return url;
-            }
-        } catch (Exception ignored) {
+            long t0 = System.currentTimeMillis();
+            String warmed = PhpServer.get().warmUp(scriptName, queryString);
+            Log.i("Php", "预热完成，耗时=" + (System.currentTimeMillis() - t0) + "ms, 内容长度=" + (warmed == null ? 0 : warmed.length()));
+        } catch (Exception e) {
+            Log.w("Php", "预热失败（不影响播放）: " + e.getMessage());
         }
 
-        // 4. #EXTM3U
-        if (output.startsWith("#EXTM3U")) {
-            throw new ExtractException("PHP脚本返回m3u8动态列表，暂不支持");
-        }
-
-        throw new ExtractException("PHP返回无法识别的内容: " +
-                (output.length() > 100 ? output.substring(0, 100) + "..." : output));
+        return localUrl;
     }
 
     @Override
