@@ -9,9 +9,12 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 本地 PHP 服务器（仅监听 127.0.0.1 随机端口，不对外暴露）。
@@ -19,6 +22,12 @@ import java.util.concurrent.Executors;
  *
  * 注意：请求由**单线程**工作队列串行处理。PHP embed 运行时是全局单例且非线程安全，
  * 并发执行会踩坏内存直接崩掉进程，所以这里不允许并发。
+ *
+ * 优化点：
+ * 1. 3秒响应缓存：同一脚本+参数重复请求直接返回上次 m3u8，不重复执行 PHP
+ * 2. 有界队列(8)：队列满直接拒绝(503)，避免请求堆积导致惊群
+ * 3. 仅缓存成功的 m3u8 响应：空响应/错误不缓存，让 ExoPlayer 立即重试
+ * 4. LRU 缓存上限(16条)：防止频繁切频道导致内存泄漏
  */
 public class PhpServer {
 
@@ -28,8 +37,14 @@ public class PhpServer {
     /** 读取请求的超时：只用于防止半个连接把唯一的 worker 卡死 */
     private static final int SO_TIMEOUT_MS = 10000;
 
-    /** 响应缓存 TTL（毫秒）：同一脚本+参数在此时长内重复请求直接返回上次结果，避免单线程 worker 堆积导致超时 */
+    /** 响应缓存 TTL（毫秒）：同一脚本+参数在此时长内重复请求直接返回上次结果 */
     private static final long CACHE_TTL_MS = 3000;
+
+    /** 缓存最大条目数：LRU 淘汰 */
+    private static final int CACHE_MAX_ENTRIES = 16;
+
+    /** worker 队列最大长度：超过直接拒绝(503)，避免请求堆积 */
+    private static final int WORKER_QUEUE_CAPACITY = 8;
 
     private static class CacheEntry {
         final String body;
@@ -48,12 +63,20 @@ public class PhpServer {
     private static PhpServer instance;
     private ServerSocket socket;
     private Thread thread;
-    private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "php-handler");
-        t.setDaemon(true);
-        return t;
-    });
-    private final ConcurrentHashMap<String, CacheEntry> responseCache = new ConcurrentHashMap<>();
+    private final ExecutorService worker = new ThreadPoolExecutor(
+            1, 1, 0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(WORKER_QUEUE_CAPACITY),
+            r -> { Thread t = new Thread(r, "php-handler"); t.setDaemon(true); return t; },
+            new ThreadPoolExecutor.AbortPolicy()
+    );
+    /** LRU 缓存：按访问顺序排列，超过上限淘汰最久未使用的 */
+    private final LinkedHashMap<String, CacheEntry> responseCache =
+            new LinkedHashMap<String, CacheEntry>(CACHE_MAX_ENTRIES, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, CacheEntry> eldest) {
+                    return size() > CACHE_MAX_ENTRIES;
+                }
+            };
     private volatile boolean running;
 
     private PhpServer() {
@@ -71,7 +94,9 @@ public class PhpServer {
         start();
         writeScript(scriptName, scriptContent);
         // 新脚本写入时清除该脚本相关的缓存
-        responseCache.keySet().removeIf(key -> key.startsWith(scriptName + "?"));
+        synchronized (responseCache) {
+            responseCache.keySet().removeIf(key -> key.startsWith(scriptName + "?"));
+        }
         String url = "http://127.0.0.1:" + socket.getLocalPort() + "/" + scriptName;
         if (queryString != null && !queryString.isEmpty()) url += "?" + queryString;
         Log.i(TAG, "注册脚本 " + scriptName + " -> " + url);
@@ -100,8 +125,19 @@ public class PhpServer {
         while (running) {
             try {
                 Socket client = socket.accept();
-                // 交给单线程 worker 串行处理：既避免并发跑 PHP，也避免线程无限堆积
-                worker.execute(() -> handle(client));
+                try {
+                    worker.execute(() -> handle(client));
+                } catch (java.util.concurrent.RejectedExecutionException e) {
+                    // 队列满，直接返回 503，让 ExoPlayer 稍后重试
+                    Log.w(TAG, "worker 队列已满，拒绝请求");
+                    try {
+                        OutputStream out = client.getOutputStream();
+                        sendResponse(out, 503, "text/plain", "Service Busy".getBytes(StandardCharsets.UTF_8));
+                    } catch (Exception ignored) {
+                    } finally {
+                        try { client.close(); } catch (Exception ignored) {}
+                    }
+                }
             } catch (IOException ignored) {
                 if (!running) break;
             }
@@ -143,9 +179,12 @@ public class PhpServer {
                 return;
             }
 
-            // 响应缓存：3秒内同一脚本+参数的请求直接返回上次结果，避免单线程 worker 堆积
+            // 响应缓存检查
             String cacheKey = scriptName + "?" + queryString;
-            CacheEntry cached = responseCache.get(cacheKey);
+            CacheEntry cached;
+            synchronized (responseCache) {
+                cached = responseCache.get(cacheKey);
+            }
             if (cached != null && cached.fresh()) {
                 Log.i(TAG, "缓存命中(" + (System.currentTimeMillis() - cached.time) + "ms), 跳过PHP执行");
                 sendResponse(output, 200, cached.contentType, cached.body.getBytes(StandardCharsets.UTF_8));
@@ -170,11 +209,15 @@ public class PhpServer {
                     ? "application/vnd.apple.mpegurl"
                     : "text/html; charset=utf-8";
 
-            // 存入缓存
-            responseCache.put(cacheKey, new CacheEntry(result, contentType));
+            // 仅缓存成功的 m3u8 响应；空响应/错误不缓存，让 ExoPlayer 立即重试
+            if (result.startsWith("#EXTM3U")) {
+                synchronized (responseCache) {
+                    responseCache.put(cacheKey, new CacheEntry(result, contentType));
+                }
+            } else {
+                Log.w(TAG, "非m3u8响应，不缓存: " + result.substring(0, Math.min(result.length(), 100)));
+            }
 
-            // 打印返回内容前200字符，方便排查
-            Log.i(TAG, "返回内容前200字符: " + result.substring(0, Math.min(result.length(), 200)));
             Log.i(TAG, "返回 " + contentType + ", 长度=" + result.length());
             sendResponse(output, 200, contentType, result.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
@@ -244,6 +287,7 @@ public class PhpServer {
             case 404: return "Not Found";
             case 405: return "Method Not Allowed";
             case 500: return "Internal Server Error";
+            case 503: return "Service Unavailable";
             default: return "OK";
         }
     }
