@@ -112,6 +112,76 @@ View 状态保存/恢复按 `id` 匹配。`R.id.action` 在 leanback 版直播�
 
 ---
 
+# 新增：php:// 远程 PHP 脚本源支持
+
+## 功能说明
+
+直播源地址以 `php://` 开头时，下载远程 PHP 脚本到本地执行，通过内置 PHP 运行时（embed SAPI）返回播放地址。
+
+地址格式：
+
+```
+php://https://example.com/script.php?id=cctv5
+```
+
+工作流程：
+
+1. 下载远程 PHP 脚本文本（缓存 1 小时，过期自动重新下载）
+2. 写入内部存储 web 根目录 `filesDir/php/`
+3. 启动本地 HTTP 服务器（仅监听 `127.0.0.1`，随机端口），返回 `http://127.0.0.1:端口/script_xxx.php?id=cctv5` 给播放器
+4. 播放器每次请求该本地地址，服务器执行一次 PHP 脚本，返回 m3u8 / 重定向地址
+
+## 设计要点
+
+- **内部存储**：脚本和 php.ini 都放在 `filesDir/php/`，不依赖任何存储权限，避免未授权外部存储时静默失败
+- **仅监听 127.0.0.1**：不对外暴露，安全；ExoPlayer 直接访问本机回环地址
+- **单线程串行执行**：PHP embed 运行时是进程级全局单例且非线程安全，并发调用会 SIGSEGV。PhpServer 用 `Executors.newSingleThreadExecutor()`，PhpBridge 内部有全局 `synchronized(LOCK)`，双保险
+- **目录可写校验**：`ensureWritable()` 在初始化时探测目录真实可写性，失败直接抛异常而非等到写文件才报错
+- **错误透出**：`isReady()` / `getInitError()` 让 Extractor 能拿到初始化失败原因，避免静默切线路
+
+## 新增模块
+
+### `php` 模块（`com.fongmi.php`）
+
+| 文件 | 说明 |
+|---|---|
+| `php/build.gradle` | Android Library 模块，依赖 `:catvod`，ABI 仅 arm64-v8a / armeabi-v7a，c++_static |
+| `php/src/main/cpp/CMakeLists.txt` | NDK 构建配置，链接 libphp / libcurl / libonig / libsqlite3 |
+| `php/src/main/cpp/native-lib.cpp` | JNI 桥接，PHP embed SAPI 初始化与 `runPhpFile()` |
+| `php/src/main/cpp/includes/` | PHP 头文件（Zend / TSRM / sapi_embed / ext） |
+| `php/src/main/jniLibs/arm64-v8a/` | libphp.so、libcurl.so、libonig.so、libsqlite3.so |
+| `php/src/main/jniLibs/armeabi-v7a/` | 同上 |
+| `php/src/main/assets/php/php.ini` | PHP 配置（upload_tmp_dir / session.save_path / error_log 运行时改写） |
+| `php/src/main/java/com/fongmi/php/PhpBridge.java` | native 方法 `runPhpFile()` + 全局锁 `runPhpFileExclusive()` |
+| `php/src/main/java/com/fongmi/php/PhpEnv.java` | PHP 环境管理：初始化、web 根目录、php.ini 复制、目录可写校验、错误状态 |
+| `php/src/main/java/com/fongmi/php/PhpServer.java` | 本地 HTTP 服务器：127.0.0.1 绑定、单线程 worker、请求解析、PHP 串行执行、响应返回 |
+
+### 目录结构
+
+- web 根目录：`/data/data/com.fongmi.android.tv/files/php/`（内部存储，无需权限）
+- 脚本文件名：`script_` + URL.hashCode() 十六进制 + `.php`
+- 临时目录：`files/php/tmp/`（upload_tmp_dir / session.save_path / error_log）
+- php.ini：`files/php/php.ini`
+
+### app 侧改动
+
+| 文件 | 改动 |
+|---|---|
+| `settings.gradle` | 新增 `include ':php'` |
+| `app/build.gradle` | 新增 `implementation project(':php')` |
+| `app/src/main/java/com/fongmi/android/tv/player/extractor/Php.java` | Extractor 实现：下载脚本 → 注册到本地服务器 → 返回 127.0.0.1 URL |
+| `app/src/main/java/com/fongmi/android/tv/player/extractor/Source.java` | 构造函数新增 `new Php()` 注册 |
+
+## 权限
+
+无需任何存储权限（全部在内部沙箱）。仅需普通的 `INTERNET` 权限（下载远程脚本）。
+
+## 验证
+
+直播源列表中添加频道，地址填 `php://https://example.com/nujiang.php?id=cctv5`，切换到该频道后 ExoPlayer 应正常播放。logcat 过滤 `PhpServer|PhpEnv|Php` 可看到请求和 PHP 执行日志。
+
+---
+
 # 開發者文件
 
 基於 [CatVod](https://github.com/CatVodTVOfficial/CatVodTVJarLoader) 的開源 Android 影音應用程式，同時支援 **Android TV 大螢幕**與**手機**兩種使用情境，並且透過外部配置靈活擴展內容。
