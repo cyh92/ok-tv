@@ -5,26 +5,36 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.Enumeration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * 本地 PHP 服务器（监听所有接口随机端口）。
+ * 本地 PHP 服务器（仅监听 127.0.0.1 随机端口，不对外暴露）。
  * 收到请求时直接执行对应 PHP 文件，返回原始输出。
+ *
+ * 注意：请求由**单线程**工作队列串行处理。PHP embed 运行时是全局单例且非线程安全，
+ * 并发执行会踩坏内存直接崩掉进程，所以这里不允许并发。
  */
 public class PhpServer {
 
     private static final String TAG = "PhpServer";
     private static final byte[] END = "\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
 
+    /** 读取请求的超时：只用于防止半个连接把唯一的 worker 卡死 */
+    private static final int SO_TIMEOUT_MS = 10000;
+
     private static PhpServer instance;
     private ServerSocket socket;
     private Thread thread;
+    private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "php-handler");
+        t.setDaemon(true);
+        return t;
+    });
     private volatile boolean running;
 
     private PhpServer() {
@@ -41,28 +51,10 @@ public class PhpServer {
     public synchronized String register(String scriptName, String scriptContent, String queryString) throws IOException {
         start();
         writeScript(scriptName, scriptContent);
-        String host = getLocalIpAddress();
-        String url = "http://" + host + ":" + socket.getLocalPort() + "/" + scriptName;
+        String url = "http://127.0.0.1:" + socket.getLocalPort() + "/" + scriptName;
         if (queryString != null && !queryString.isEmpty()) url += "?" + queryString;
         Log.i(TAG, "注册脚本 " + scriptName + " -> " + url);
         return url;
-    }
-
-    /**
-     * 预热：直接执行一次 PHP 脚本，让 native 库和 cURL 加载完成。
-     * 返回脚本输出内容（用于确认预热成功）。
-     */
-    public String warmUp(String scriptName, String queryString) throws IOException {
-        java.io.File scriptFile = new java.io.File(PhpEnv.getScriptDir(), scriptName);
-        if (!scriptFile.exists()) throw new IOException("脚本不存在: " + scriptName);
-        String result = PhpBridge.runPhpFile(
-                scriptFile.getAbsolutePath(),
-                PhpEnv.getIniPath(),
-                "GET",
-                queryString == null ? "" : queryString,
-                ""
-        );
-        return result == null ? "" : result.trim();
     }
 
     private void writeScript(String name, String content) throws IOException {
@@ -73,53 +65,22 @@ public class PhpServer {
         }
     }
 
-    private String getLocalIpAddress() {
-        try {
-            String preferred = null;
-            Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
-            while (ifaces.hasMoreElements()) {
-                NetworkInterface iface = ifaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp()) continue;
-                Enumeration<InetAddress> addrs = iface.getInetAddresses();
-                while (addrs.hasMoreElements()) {
-                    InetAddress addr = addrs.nextElement();
-                    if (addr.isLoopbackAddress() || !(addr instanceof Inet4Address)) continue;
-                    String ip = addr.getHostAddress();
-                    Log.i(TAG, "网络接口 " + iface.getName() + " -> " + ip);
-                    // 优先 192.168.x.x
-                    if (ip.startsWith("192.168.")) return ip;
-                    // 其次 10.x.x.x
-                    if (preferred == null || ip.startsWith("10.")) preferred = ip;
-                }
-            }
-            if (preferred != null) return preferred;
-        } catch (Exception e) {
-            Log.e(TAG, "获取本机IP失败", e);
-        }
-        return "127.0.0.1";
-    }
-
     private synchronized void start() throws IOException {
         if (running) return;
         running = true;
-        socket = new ServerSocket(0, 50, InetAddress.getByName("0.0.0.0"));
+        socket = new ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"));
         thread = new Thread(this::acceptLoop, "php-server");
         thread.setDaemon(true);
         thread.start();
-        Log.i(TAG, "PHP 服务器启动于端口 " + socket.getLocalPort());
+        Log.i(TAG, "PHP 服务器启动于 127.0.0.1:" + socket.getLocalPort());
     }
 
     private void acceptLoop() {
         while (running) {
             try {
                 Socket client = socket.accept();
-                new Thread(() -> {
-                    try {
-                        handle(client);
-                    } finally {
-                        try { client.close(); } catch (Exception ignored) {}
-                    }
-                }, "php-handler").start();
+                // 交给单线程 worker 串行处理：既避免并发跑 PHP，也避免线程无限堆积
+                worker.execute(() -> handle(client));
             } catch (IOException ignored) {
                 if (!running) break;
             }
@@ -129,12 +90,17 @@ public class PhpServer {
     private void handle(Socket client) {
         OutputStream output = null;
         try {
-            client.setSoTimeout(30000);
+            client.setSoTimeout(SO_TIMEOUT_MS);
             InputStream input = client.getInputStream();
             output = client.getOutputStream();
 
             String requestLine = readRequestLine(input);
-            if (requestLine == null || !requestLine.startsWith("GET ")) return;
+            if (requestLine == null) return;
+            if (!requestLine.startsWith("GET ")) {
+                Log.w(TAG, "不支持的方法: " + requestLine);
+                sendResponse(output, 405, "text/plain", "Method Not Allowed".getBytes(StandardCharsets.UTF_8));
+                return;
+            }
 
             Log.i(TAG, "请求: " + requestLine);
 
@@ -157,7 +123,7 @@ public class PhpServer {
             }
 
             long t0 = System.currentTimeMillis();
-            String result = PhpBridge.runPhpFile(
+            String result = PhpBridge.runPhpFileExclusive(
                     scriptFile.getAbsolutePath(),
                     PhpEnv.getIniPath(),
                     "GET",
@@ -228,7 +194,7 @@ public class PhpServer {
     }
 
     private void sendResponse(OutputStream output, int code, String contentType, byte[] body) throws IOException {
-        String header = "HTTP/1.1 " + code + " OK\r\n"
+        String header = "HTTP/1.1 " + code + " " + reason(code) + "\r\n"
                 + "Content-Type: " + contentType + "\r\n"
                 + "Content-Length: " + body.length + "\r\n"
                 + "Cache-Control: no-cache, no-store, must-revalidate\r\n"
@@ -237,5 +203,15 @@ public class PhpServer {
         output.write(header.getBytes(StandardCharsets.US_ASCII));
         output.write(body);
         output.flush();
+    }
+
+    private static String reason(int code) {
+        switch (code) {
+            case 200: return "OK";
+            case 404: return "Not Found";
+            case 405: return "Method Not Allowed";
+            case 500: return "Internal Server Error";
+            default: return "OK";
+        }
     }
 }
