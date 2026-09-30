@@ -9,6 +9,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,6 +28,23 @@ public class PhpServer {
     /** 读取请求的超时：只用于防止半个连接把唯一的 worker 卡死 */
     private static final int SO_TIMEOUT_MS = 10000;
 
+    /** 响应缓存 TTL（毫秒）：同一脚本+参数在此时长内重复请求直接返回上次结果，避免单线程 worker 堆积导致超时 */
+    private static final long CACHE_TTL_MS = 3000;
+
+    private static class CacheEntry {
+        final String body;
+        final String contentType;
+        final long time;
+        CacheEntry(String body, String contentType) {
+            this.body = body;
+            this.contentType = contentType;
+            this.time = System.currentTimeMillis();
+        }
+        boolean fresh() {
+            return System.currentTimeMillis() - time < CACHE_TTL_MS;
+        }
+    }
+
     private static PhpServer instance;
     private ServerSocket socket;
     private Thread thread;
@@ -35,6 +53,7 @@ public class PhpServer {
         t.setDaemon(true);
         return t;
     });
+    private final ConcurrentHashMap<String, CacheEntry> responseCache = new ConcurrentHashMap<>();
     private volatile boolean running;
 
     private PhpServer() {
@@ -51,6 +70,8 @@ public class PhpServer {
     public synchronized String register(String scriptName, String scriptContent, String queryString) throws IOException {
         start();
         writeScript(scriptName, scriptContent);
+        // 新脚本写入时清除该脚本相关的缓存
+        responseCache.keySet().removeIf(key -> key.startsWith(scriptName + "?"));
         String url = "http://127.0.0.1:" + socket.getLocalPort() + "/" + scriptName;
         if (queryString != null && !queryString.isEmpty()) url += "?" + queryString;
         Log.i(TAG, "注册脚本 " + scriptName + " -> " + url);
@@ -122,6 +143,15 @@ public class PhpServer {
                 return;
             }
 
+            // 响应缓存：3秒内同一脚本+参数的请求直接返回上次结果，避免单线程 worker 堆积
+            String cacheKey = scriptName + "?" + queryString;
+            CacheEntry cached = responseCache.get(cacheKey);
+            if (cached != null && cached.fresh()) {
+                Log.i(TAG, "缓存命中(" + (System.currentTimeMillis() - cached.time) + "ms), 跳过PHP执行");
+                sendResponse(output, 200, cached.contentType, cached.body.getBytes(StandardCharsets.UTF_8));
+                return;
+            }
+
             long t0 = System.currentTimeMillis();
             String result = PhpBridge.runPhpFileExclusive(
                     scriptFile.getAbsolutePath(),
@@ -136,12 +166,15 @@ public class PhpServer {
             if (result == null) result = "";
             result = result.trim();
 
-            // 打印返回内容前200字符，方便排查
-            Log.i(TAG, "返回内容前200字符: " + result.substring(0, Math.min(result.length(), 200)));
-
             String contentType = result.startsWith("#EXTM3U")
                     ? "application/vnd.apple.mpegurl"
                     : "text/html; charset=utf-8";
+
+            // 存入缓存
+            responseCache.put(cacheKey, new CacheEntry(result, contentType));
+
+            // 打印返回内容前200字符，方便排查
+            Log.i(TAG, "返回内容前200字符: " + result.substring(0, Math.min(result.length(), 200)));
             Log.i(TAG, "返回 " + contentType + ", 长度=" + result.length());
             sendResponse(output, 200, contentType, result.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
