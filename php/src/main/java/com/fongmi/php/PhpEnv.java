@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import com.github.catvod.utils.Path;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -36,15 +38,23 @@ public class PhpEnv {
     /**
      * 初始化 PHP 环境（从 assets 复制 php.ini，准备临时目录）。
      * 在后台线程调用。
+     *
+     * 脚本目录（web 根目录）使用外部存储 Path.tv()/php/，方便调试和查看。
      */
     public synchronized void init() {
         if (ready) return;
         try {
-            phpDir = new File(context.getFilesDir(), "php");
+            // web 根目录：外部存储 TV/php/
+            phpDir = new File(Path.tv(), "php");
+            phpDir.mkdirs();
+
             tmpDir = new File(phpDir, "tmp");
             tmpDir.mkdirs();
 
-            iniFile = new File(phpDir, "php.ini");
+            // php.ini 放内部 files 目录
+            File iniDir = new File(context.getFilesDir(), "php");
+            iniDir.mkdirs();
+            iniFile = new File(iniDir, "php.ini");
 
             // 版本变化时重新复制
             SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -64,7 +74,7 @@ public class PhpEnv {
             }
 
             ready = true;
-            Log.i(TAG, "PHP 环境初始化完成: " + phpDir.getAbsolutePath());
+            Log.i(TAG, "PHP 环境初始化完成, web根目录: " + phpDir.getAbsolutePath());
         } catch (Exception e) {
             Log.e(TAG, "PHP 环境初始化失败", e);
         }
