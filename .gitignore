@@ -3,6 +3,7 @@
 .gradle
 .github
 .settings
+.workbuddy
 *build
 *.jks
 *.properties
