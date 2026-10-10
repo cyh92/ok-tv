@@ -56,8 +56,8 @@ public class Tbs {
     }
 
     public static String url() {
-        String base = "https://gitee.com/api/v5/repos/cyh92/live/releases/624126/attach_files/";
-        String fileId = isCpu64Bit() ? "2685847" : "2685844";
+        String base = "https://gitee.com/api/v5/repos/cyh92/mybox/releases/1194886/attach_files/";
+        String fileId = isCpu64Bit() ? "3355490" : "3355489";
         return base + fileId + "/download?access_token=" + BuildConfig.GITEE_Token;
     }
 
