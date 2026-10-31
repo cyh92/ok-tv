@@ -1,32 +1,20 @@
 package com.fongmi.android.tv.ui.custom;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.Uri;
-import android.net.http.SslError;
-import android.os.Build;
 import android.text.TextUtils;
+import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.CookieManager;
-import android.webkit.RenderProcessGoneDetail;
-import android.webkit.SslErrorHandler;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.impl.ParseCallback;
-import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.dialog.CloudflareDialog;
 import com.fongmi.android.tv.utils.Sniffer;
 import com.fongmi.android.tv.utils.UrlUtil;
@@ -44,7 +32,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 
-public final class ParseWebView extends WebView implements DialogInterface.OnDismissListener {
+/**
+ * 解析源 WebView。
+ * <p>
+ * 自身为 FrameLayout 容器，实际渲染交给 {@link ParseKernel}，
+ * 以便在系统内核与 X5 内核之间切换。
+ */
+public final class ParseWebView extends FrameLayout implements DialogInterface.OnDismissListener, ParseKernel.Host {
 
     private static final String TAG = "ParseWebView";
 
@@ -52,6 +46,7 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
     private static final String BLANK = "about:blank";
     private static final int MAX_URLS = 5;
 
+    private final ParseKernel kernel;
     private final AtomicReference<ParseCallback> callbackRef = new AtomicReference<>();
     private final List<ParseWebView> children = new ArrayList<>();
     private final LinkedHashSet<String> urls = new LinkedHashSet<>();
@@ -74,26 +69,14 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
 
     private ParseWebView(@NonNull Context context) {
         super(context);
-        initSettings();
+        kernel = ParseKernels.create(context);
+        kernel.init(this);
+        userAgent = kernel.getUserAgentString();
+        addView(kernel.getView(), new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private void initSettings() {
-        WebSettings setting = getSettings();
-        setting.setSupportZoom(true);
-        setting.setUseWideViewPort(true);
-        setting.setDatabaseEnabled(true);
-        setting.setDomStorageEnabled(true);
-        setting.setJavaScriptEnabled(true);
-        setting.setBuiltInZoomControls(true);
-        setting.setDisplayZoomControls(false);
-        setting.setLoadWithOverviewMode(true);
-        setting.setUserAgentString(Setting.getUa());
-        userAgent = setting.getUserAgentString();
-        setting.setMediaPlaybackRequiresUserGesture(false);
-        setting.setJavaScriptCanOpenWindowsAutomatically(false);
-        setting.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        setWebViewClient(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new OreoClient() : new Client());
+    private View view() {
+        return kernel.getView();
     }
 
     public ParseWebView start(String key, String from, Map<String, String> headers, String url, String click, ParseCallback callback, boolean detect) {
@@ -106,16 +89,14 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
         this.key = key;
         this.url = url;
         Map<String, String> safeHeaders = headers == null ? Collections.emptyMap() : headers;
-        WebViewClicker.ensureViewport(this);
+        WebViewClicker.ensureViewport(view());
         setHeaders(safeHeaders, url);
-        loadUrl(url, safeHeaders);
+        kernel.loadUrl(url, safeHeaders);
         return this;
     }
 
     private void setHeaders(Map<String, String> headers, String url) {
-        CookieManager manager = CookieManager.getInstance();
-        manager.setAcceptCookie(true);
-        manager.setAcceptThirdPartyCookies(this, true);
+        kernel.setAcceptThirdPartyCookies(true);
         for (Map.Entry<String, String> entry : headers.entrySet()) applyHeader(entry, url);
     }
 
@@ -123,89 +104,68 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
         String name = entry.getKey();
         if (HttpHeaders.USER_AGENT.equalsIgnoreCase(UrlUtil.fixHeader(name))) {
             userAgent = entry.getValue();
-            getSettings().setUserAgentString(userAgent);
+            kernel.setUserAgentString(userAgent);
         } else if (HttpHeaders.COOKIE.equalsIgnoreCase(name)) {
-            WebViewCookies.set(this, url, entry.getValue());
+            kernel.setCookies(url, entry.getValue());
         }
     }
 
-    private class Client extends WebViewClient {
+    @Override
+    public void onPageStarted() {
+        pageGeneration++;
+    }
 
-        @Override
-        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
-            super.onPageStarted(view, url, favicon);
-            pageGeneration++;
-        }
-
-        @Override
-        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-            if (callbackRef.get() == null || loadFailed) return super.shouldInterceptRequest(view, request);
-            Uri uri = request.getUrl();
-            String url = uri.toString();
-            String host = uri.getHost();
-            if (isLocalDocument(uri)) return super.shouldInterceptRequest(view, request);
-            boolean cloudflare = WebViewCloudflare.isResource(uri);
-            if (TextUtils.isEmpty(host) || (!cloudflare && WebViewRules.isAd(uri))) return WebViewRules.empty();
-            Map<String, String> headers = request.getRequestHeaders();
-            if (WebViewCloudflare.isTurnstile(uri)) App.post(ParseWebView.this::showDialog);
-            if (detect && PLAYER.matcher(url).find() && addUrl(url)) {
-                onParseAdd(headers, url);
-            } else if (isVideoFormat(url)) {
-                App.post(() -> {
-                    if (!loadFailed) onParseSuccess(headers, url);
-                });
-            }
-            return super.shouldInterceptRequest(view, request);
-        }
-
-        @Override
-        public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-            super.onReceivedError(view, request, error);
-            if (request.isForMainFrame()) onLoadError("network", error.getErrorCode());
-        }
-
-        @Override
-        public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
-            super.onReceivedHttpError(view, request, errorResponse);
-            if (WebViewCloudflare.isChallenge(errorResponse)) App.post(ParseWebView.this::showDialog);
-            else if (request.isForMainFrame()) onLoadError("HTTP", errorResponse.getStatusCode());
-        }
-
-        @Override
-        public void onPageFinished(WebView view, String url) {
-            super.onPageFinished(view, url);
-            if (BLANK.equals(url) || stopped || loadFailed) return;
-            int generation = pageGeneration;
-            BooleanSupplier current = () -> !stopped && !loadFailed && generation == pageGeneration;
-            Uri uri = Uri.parse(url);
-            evaluateJavascript(WebViewCloudflare.CHECK_SCRIPT, value -> {
-                if (!current.getAsBoolean()) return;
-                if ("true".equalsIgnoreCase(value)) showDialog();
-                else WebViewRules.apply(ParseWebView.this, uri, clickScript, current);
+    @Override
+    public boolean onIntercept(Uri uri, Map<String, String> headers, boolean isMainFrame) {
+        if (callbackRef.get() == null || loadFailed) return false;
+        String url = uri.toString();
+        String host = uri.getHost();
+        if (isLocalDocument(uri)) return false;
+        boolean cloudflare = WebViewCloudflare.isResource(uri);
+        if (TextUtils.isEmpty(host) || (!cloudflare && WebViewRules.isAd(uri))) return true;
+        if (WebViewCloudflare.isTurnstile(uri)) App.post(ParseWebView.this::showDialog);
+        if (detect && PLAYER.matcher(url).find() && addUrl(url)) {
+            onParseAdd(headers, url);
+        } else if (isVideoFormat(url)) {
+            App.post(() -> {
+                if (!loadFailed) onParseSuccess(headers, url);
             });
         }
-
-        @Override
-        @SuppressLint("WebViewClientOnReceivedSslError")
-        public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-            handler.proceed();
-        }
-
-        @Override
-        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            return false;
-        }
+        return false;
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private final class OreoClient extends Client {
+    @Override
+    public void onLoadError(String kind, int code) {
+        if (stopped || loadFailed || callbackRef.get() == null) return;
+        SpiderDebug.log(TAG, "load error=%s %d", kind, code);
+        loadFailed = true;
+        kernel.stopLoading();
+        if (children.isEmpty()) stop(true);
+    }
 
-        @Override
-        public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-            stop(true, true);
-            destroyView();
-            return true;
-        }
+    @Override
+    public void onHttpError(int statusCode, boolean isMainFrame, boolean challenge) {
+        if (challenge) App.post(ParseWebView.this::showDialog);
+        else if (isMainFrame) onLoadError("HTTP", statusCode);
+    }
+
+    @Override
+    public void onPageFinished(String url) {
+        if (BLANK.equals(url) || stopped || loadFailed) return;
+        int generation = pageGeneration;
+        BooleanSupplier current = () -> !stopped && !loadFailed && generation == pageGeneration;
+        Uri uri = Uri.parse(url);
+        kernel.evaluateJavascript(WebViewCloudflare.CHECK_SCRIPT, value -> {
+            if (!current.getAsBoolean()) return;
+            if ("true".equalsIgnoreCase(value)) showDialog();
+            else WebViewRules.apply(view(), kernel::evaluateJavascript, uri, clickScript, current);
+        });
+    }
+
+    @Override
+    public void onRenderProcessGone() {
+        stop(true, true);
+        destroyView();
     }
 
     private static boolean isLocalDocument(Uri uri) {
@@ -271,14 +231,6 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
         }, false);
     }
 
-    private void onLoadError(String kind, int code) {
-        if (stopped || loadFailed || callbackRef.get() == null) return;
-        SpiderDebug.log(TAG, "load error=%s %d", kind, code);
-        loadFailed = true;
-        stopLoading();
-        if (children.isEmpty()) stop(true);
-    }
-
     private void onParseSuccess(Map<String, String> headers, String url) {
         ParseCallback cb = callbackRef.getAndSet(null);
         if (cb == null) return;
@@ -293,7 +245,7 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
 
     private Map<String, String> getResultHeaders(Map<String, String> headers, String url) {
         Map<String, String> result = new LinkedHashMap<>(headers == null ? Collections.emptyMap() : headers);
-        putHeader(result, HttpHeaders.COOKIE, CookieManager.getInstance().getCookie(url));
+        putHeader(result, HttpHeaders.COOKIE, kernel.getCookie(url));
         putHeader(result, HttpHeaders.USER_AGENT, userAgent);
         return result;
     }
@@ -314,8 +266,8 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
         stopped = true;
         hideDialog();
         if (!rendererGone) {
-            stopLoading();
-            loadUrl(BLANK);
+            kernel.stopLoading();
+            kernel.loadUrl(BLANK);
         }
         App.removeCallbacks(timer);
         for (ParseWebView child : children) child.release();
@@ -334,6 +286,6 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
     private void destroyView() {
         if (destroyed) return;
         destroyed = true;
-        destroy();
+        kernel.destroy();
     }
 }

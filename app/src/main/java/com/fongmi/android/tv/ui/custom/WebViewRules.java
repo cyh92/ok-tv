@@ -3,7 +3,7 @@ package com.fongmi.android.tv.ui.custom;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.webkit.WebResourceResponse;
-import android.webkit.WebView;
+import android.view.View;
 
 import com.fongmi.android.tv.api.config.RuleConfig;
 import com.fongmi.android.tv.utils.Sniffer;
@@ -16,10 +16,10 @@ import java.util.function.BooleanSupplier;
 
 final class WebViewRules {
 
-    static void apply(WebView view, Uri uri, String script, BooleanSupplier current) {
+    static void apply(View view, Evaluator evaluator, Uri uri, String script, BooleanSupplier current) {
         List<String> scripts = new ArrayList<>(Sniffer.getScript(uri));
         if (!TextUtils.isEmpty(script) && !scripts.contains(script)) scripts.add(0, script);
-        evaluate(view, scripts, 0, current, () -> WebViewClicker.click(view, Sniffer.getClick(uri), current));
+        evaluate(view, evaluator, scripts, 0, current, () -> WebViewClicker.click(view, evaluator, Sniffer.getClick(uri), current));
     }
 
     static boolean isAd(Uri uri) {
@@ -32,15 +32,15 @@ final class WebViewRules {
         return new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(new byte[0]));
     }
 
-    private static void evaluate(WebView view, List<String> scripts, int index, BooleanSupplier current, Runnable complete) {
+    private static void evaluate(View view, Evaluator evaluator, List<String> scripts, int index, BooleanSupplier current, Runnable complete) {
         if (!current.getAsBoolean()) return;
         if (index >= scripts.size()) {
             complete.run();
             return;
         }
         String script = scripts.get(index);
-        if (TextUtils.isEmpty(script)) evaluate(view, scripts, index + 1, current, complete);
-        else view.evaluateJavascript(script, value -> evaluate(view, scripts, index + 1, current, complete));
+        if (TextUtils.isEmpty(script)) evaluate(view, evaluator, scripts, index + 1, current, complete);
+        else evaluator.evaluate(script, value -> evaluate(view, evaluator, scripts, index + 1, current, complete));
     }
 
     private WebViewRules() {

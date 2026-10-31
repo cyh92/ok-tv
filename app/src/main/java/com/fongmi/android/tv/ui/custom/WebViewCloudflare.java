@@ -21,8 +21,12 @@ final class WebViewCloudflare {
     }
 
     static boolean isChallenge(WebResourceResponse response) {
-        if (response == null || response.getResponseHeaders() == null) return false;
-        for (Map.Entry<String, String> entry : response.getResponseHeaders().entrySet()) if ("cf-mitigated".equalsIgnoreCase(entry.getKey()) && entry.getValue() != null && "challenge".equalsIgnoreCase(entry.getValue().trim())) return true;
+        return response != null && isChallenge(response.getResponseHeaders());
+    }
+
+    static boolean isChallenge(Map<String, String> headers) {
+        if (headers == null) return false;
+        for (Map.Entry<String, String> entry : headers.entrySet()) if ("cf-mitigated".equalsIgnoreCase(entry.getKey()) && entry.getValue() != null && "challenge".equalsIgnoreCase(entry.getValue().trim())) return true;
         return false;
     }
 

@@ -5,7 +5,6 @@ import android.util.DisplayMetrics;
 import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
-import android.webkit.WebView;
 
 import com.fongmi.android.tv.App;
 import com.github.catvod.crawler.SpiderDebug;
@@ -20,15 +19,15 @@ final class WebViewClicker {
     private static final long RETRY_DELAY_MS = 250;
     private static final long UP_DELAY_MS = 50;
 
-    static void click(WebView view, List<String> selectors, BooleanSupplier current) {
-        click(view, selectors, 0, 0, current);
+    static void click(View view, Evaluator evaluator, List<String> selectors, BooleanSupplier current) {
+        click(view, evaluator, selectors, 0, 0, current);
     }
 
-    private static void click(WebView view, List<String> selectors, int index, int attempt, BooleanSupplier current) {
+    private static void click(View view, Evaluator evaluator, List<String> selectors, int index, int attempt, BooleanSupplier current) {
         if (!current.getAsBoolean() || index >= selectors.size()) return;
         String selector = selectors.get(index);
         if (selector == null || selector.isEmpty()) {
-            click(view, selectors, index + 1, 0, current);
+            click(view, evaluator, selectors, index + 1, 0, current);
             return;
         }
         String js = "(function(){var e=document.querySelector(" + App.gson().toJson(selector) + ");"
@@ -36,15 +35,15 @@ final class WebViewClicker {
                 + "var r=e.getBoundingClientRect(),s=getComputedStyle(e);"
                 + "if(r.width<=0||r.height<=0||s.display==='none'||s.visibility==='hidden')return null;"
                 + "return JSON.stringify([r.left+r.width/2,r.top+r.height/2,window.innerWidth,window.innerHeight]);})()";
-        view.evaluateJavascript(js, value -> {
+        evaluator.evaluate(js, value -> {
             float[] point = decodePoint(value);
             if (!current.getAsBoolean()) return;
             if (point == null) {
-                if (attempt + 1 < MAX_ATTEMPTS) App.post(() -> click(view, selectors, index, attempt + 1, current), RETRY_DELAY_MS);
+                if (attempt + 1 < MAX_ATTEMPTS) App.post(() -> click(view, evaluator, selectors, index, attempt + 1, current), RETRY_DELAY_MS);
                 return;
             }
             dispatchClick(view, point, current);
-            App.post(() -> click(view, selectors, index + 1, 0, current), RETRY_DELAY_MS);
+            App.post(() -> click(view, evaluator, selectors, index + 1, 0, current), RETRY_DELAY_MS);
         });
     }
 
@@ -58,7 +57,7 @@ final class WebViewClicker {
         }
     }
 
-    private static void dispatchClick(WebView view, float[] point, BooleanSupplier current) {
+    private static void dispatchClick(View view, float[] point, BooleanSupplier current) {
         if (!Float.isFinite(point[2]) || !Float.isFinite(point[3]) || point[2] <= 0 || point[3] <= 0) return;
         float x = point[0] * view.getWidth() / point[2];
         float y = point[1] * view.getHeight() / point[3];
@@ -72,7 +71,7 @@ final class WebViewClicker {
         App.post(() -> releaseClick(view, x, y, downTime, current), UP_DELAY_MS);
     }
 
-    private static void releaseClick(WebView view, float x, float y, long downTime, BooleanSupplier current) {
+    private static void releaseClick(View view, float x, float y, long downTime, BooleanSupplier current) {
         int action = current.getAsBoolean() ? MotionEvent.ACTION_UP : MotionEvent.ACTION_CANCEL;
         MotionEvent up = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0);
         up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
@@ -80,7 +79,7 @@ final class WebViewClicker {
         up.recycle();
     }
 
-    static void ensureViewport(WebView view) {
+    static void ensureViewport(View view) {
         if (view.getWidth() > 0 && view.getHeight() > 0) return;
         DisplayMetrics metrics = view.getResources().getDisplayMetrics();
         int width = View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.EXACTLY);

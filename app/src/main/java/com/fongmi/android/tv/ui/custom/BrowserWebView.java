@@ -749,7 +749,7 @@ public final class BrowserWebView extends WebView {
                 return;
             }
             reportChallenge(false);
-            WebViewRules.apply(BrowserWebView.this, Uri.parse(url), clickScript, () -> isCurrentPage(load, page, url));
+            WebViewRules.apply(BrowserWebView.this, BrowserWebView.this::evaluateJavascript, Uri.parse(url), clickScript, () -> isCurrentPage(load, page, url));
             if (!isPlayback()) return;
             setAlpha(1f);
             if (playbackPaused) return;
