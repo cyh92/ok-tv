@@ -38,12 +38,13 @@ public class Tbs {
         QbSdk.PreInitCallback callback = new QbSdk.PreInitCallback() {
             @Override
             public void onViewInitFinished(boolean finished) {
+                Logger.t(TAG).d("X5 pre-init finished=%s, tbsVersion=%s", finished, QbSdk.getTbsVersion(App.get()));
                 if (finished) Notify.show(R.string.x5webview_enabled);
             }
 
             @Override
             public void onCoreInitFinished() {
-                Logger.t(TAG).d("X5 Core init finished");
+                Logger.t(TAG).d("X5 Core init finished, tbsVersion=%s", QbSdk.getTbsVersion(App.get()));
             }
         };
         QbSdk.initX5Environment(App.get(), callback);
@@ -51,6 +52,7 @@ public class Tbs {
 
     public static void init() {
         if (Setting.getParseWebView() == 0) return;
+        Logger.t(TAG).d("X5 init, tbsVersion=%s, coreInited=%s", QbSdk.getTbsVersion(App.get()), QbSdk.isTbsCoreInited());
         if (QbSdk.isTbsCoreInited()) return;
         App.post(() -> tbsInit());
     }

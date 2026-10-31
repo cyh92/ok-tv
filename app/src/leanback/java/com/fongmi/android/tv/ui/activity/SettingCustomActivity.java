@@ -76,17 +76,19 @@ public class SettingCustomActivity extends BaseActivity implements X5WebViewCall
     }
     //设置嗅探浏览器内核
     private void setParseWebview(View view) {
-        if (Build.VERSION.SDK_INT > 34) {
-            Notify.show("Android 版本大于 14，跳过 X5 内核初始化");
-            return;
-        }
         int oldIndex = Setting.getParseWebView();
         int newIndex = oldIndex == parseWebview.length - 1 ? 0 : oldIndex + 1;
         Setting.putParseWebView(newIndex);
         mBinding.parseWebviewText.setText(parseWebview[newIndex]);
-        if (newIndex == 1 && QbSdk.getTbsVersion(App.get()) <= 0) {
+        if (newIndex != 1) return;
+        if (Build.VERSION.SDK_INT > 34) Notify.show("Android 版本大于 14，X5 内核可能不可用");
+        if (QbSdk.getTbsVersion(App.get()) <= 0) {
 //            TbsDebugDialog.create(this).show();
+            // X5 core 未安装，下载完成后由 onX5Success 重启应用
             X5WebViewDialog.create(this).show();
+        } else {
+            // X5 core 已就绪，但本次运行的 X5 环境尚未初始化，需重启生效
+            restartApp();
         }
     }
 
