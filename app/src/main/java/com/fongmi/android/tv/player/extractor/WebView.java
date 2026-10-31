@@ -12,8 +12,8 @@ public class WebView implements Source.Extractor {
     }
 
     @Override
-    public String fetch(String url) throws Exception {
-        return url.substring(10);
+    public String fetch(String url) {
+        return url;
     }
 
     @Override

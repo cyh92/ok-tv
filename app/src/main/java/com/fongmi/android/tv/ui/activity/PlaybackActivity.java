@@ -7,9 +7,11 @@ import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,7 +41,11 @@ import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.SubtitleSetting;
 import com.fongmi.android.tv.ui.base.BaseActivity;
+import com.fongmi.android.tv.ui.custom.BrowserWebView;
+import com.fongmi.android.tv.ui.dialog.CloudflareDialog;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.UrlUtil;
+import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -47,6 +53,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public abstract class PlaybackActivity extends BaseActivity implements MediaController.Listener, Player.Listener, ServiceConnection {
 
@@ -62,6 +69,18 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     private boolean bound;
     private boolean stop;
     private boolean lock;
+
+    @Nullable
+    private BrowserWebView webView;
+    @Nullable
+    private CloudflareDialog webChallengeDialog;
+    @Nullable
+    private ViewGroup webChallengeParent;
+    @Nullable
+    private ViewGroup.LayoutParams webChallengeParams;
+    private int webChallengeIndex;
+    private boolean resumeWebPlaybackOnResume;
+    private int webPlaybackState;
 
     protected MediaController controller() {
         return mController;
@@ -231,6 +250,16 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     protected boolean seekTo(long deltaMs) {
+        if (isWebPlaybackActive()) {
+            long positionMs = getActivePlaybackPosition();
+            long durationMs = getActivePlaybackDuration();
+            if (positionMs < 0 || durationMs <= 0) return false;
+            long targetMs = Math.max(0, positionMs + deltaMs);
+            boolean seekToEnd = targetMs >= durationMs;
+            webView.seekVideo(seekToEnd ? durationMs : targetMs);
+            if (!seekToEnd) webView.resumeVideo();
+            return seekToEnd;
+        }
         PlayerManager player = player();
         long targetMs = Math.max(0, player.getPosition() + deltaMs);
         long durationMs = player.getDuration();
@@ -248,6 +277,151 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         String error = getPlaybackError(result);
         if (error != null) onError(error);
         else startPlayerInternal(key, result, useParse, timeout, startPositionMs, metadata);
+    }
+
+    protected void onWebPlaybackChanged(boolean active) {
+    }
+
+    protected void onWebProgressChanged(boolean visible) {
+    }
+
+    protected void onWebFullscreenChanged(boolean fullscreen) {
+    }
+
+    protected boolean supportsWebSeek() {
+        return false;
+    }
+
+    protected boolean startWebPlayback(ViewGroup parent, Result result) {
+        return startWebPlayback(parent, result, null);
+    }
+
+    protected boolean startWebPlayback(ViewGroup parent, Result result, @Nullable Consumer<MotionEvent> touchObserver) {
+        String value = result.getRealUrl();
+        if (!UrlUtil.isWebView(value) || result.hasMsg()) {
+            releaseWebView();
+            return false;
+        }
+        String url = UrlUtil.unwrapWebView(value);
+        String scheme = UrlUtil.scheme(url);
+        if (!"http".equals(scheme) && !"https".equals(scheme)) {
+            releaseWebView();
+            onError(ResUtil.getString(R.string.error_play_url));
+            return true;
+        }
+        prepareWebPlayback(parent, touchObserver);
+        webView.loadPlayback(url, result.getHeader(), result.getClick());
+        onWebPlaybackChanged(true);
+        onStateChanged(Player.STATE_BUFFERING);
+        webView.requestFocus();
+        return true;
+    }
+
+    private void prepareWebPlayback(ViewGroup parent, @Nullable Consumer<MotionEvent> touchObserver) {
+        PlayerManager player = player();
+        player.reset();
+        player.stop();
+        player.clear();
+        hidePlayerViewForWebPlayback();
+        if (webView == null) {
+            webView = BrowserWebView.createPlayback(this, webViewListener);
+            addWebView(parent);
+        } else if (webView.getParent() != parent) {
+            if (webView.getParent() instanceof ViewGroup oldParent) oldParent.removeView(webView);
+            addWebView(parent);
+        }
+        webView.setOnTouchListener(touchObserver == null ? null : (view, event) -> {
+            touchObserver.accept(event);
+            return false;
+        });
+        resumeWebPlaybackOnResume = false;
+        webPlaybackState = Player.STATE_BUFFERING;
+        getSeekView().setPlayer(null);
+        getSeekView().setVisibility(View.GONE);
+    }
+
+    private void addWebView(ViewGroup parent) {
+        int playerIndex = parent.indexOfChild(getPlayerView());
+        parent.addView(webView, playerIndex < 0 ? 0 : playerIndex + 1, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    protected boolean isWebPlayback(Result result) {
+        return UrlUtil.isWebView(result.getRealUrl());
+    }
+
+    protected boolean isWebPlaybackActive() {
+        return webView != null && webView.isPlaybackActive();
+    }
+
+    protected boolean isWebPlaybackPlaying() {
+        return webView != null && webView.isVideoPlaying();
+    }
+
+    protected boolean hasActivePlaybackSession() {
+        return isWebPlaybackActive() || (isOwner() && player().hasPlaySpec());
+    }
+
+    protected long getActivePlaybackPosition() {
+        if (!isWebPlaybackActive()) return isOwner() ? player().getPosition() : C.TIME_UNSET;
+        long position = webView.getVideoPosition();
+        return position < 0 ? C.TIME_UNSET : position;
+    }
+
+    protected long getActivePlaybackDuration() {
+        if (!isWebPlaybackActive()) return isOwner() ? player().getDuration() : C.TIME_UNSET;
+        long duration = webView.getVideoDuration();
+        return duration <= 0 ? C.TIME_UNSET : duration;
+    }
+
+    protected boolean canTrackActivePlaybackProgress() {
+        return getActivePlaybackPosition() >= 0 && getActivePlaybackDuration() > 0;
+    }
+
+    protected boolean replayWebPlayback(long position) {
+        if (!isWebPlaybackActive()) return false;
+        webView.seekVideo(Math.max(0, position));
+        webView.resumeVideo();
+        return true;
+    }
+
+    protected boolean pauseWebPlayback() {
+        if (!isWebPlaybackActive()) return false;
+        resumeWebPlaybackOnResume = false;
+        webView.pauseVideo();
+        return true;
+    }
+
+    protected boolean stopWebPlayback() {
+        if (!isWebPlaybackActive()) return false;
+        webView.stopPlayback();
+        resumeWebPlaybackOnResume = false;
+        webPlaybackState = Player.STATE_IDLE;
+        syncSeekPlayer();
+        getSeekView().setVisibility(View.VISIBLE);
+        onWebPlaybackChanged(false);
+        return true;
+    }
+
+    protected boolean resumeWebPlayback() {
+        if (!isWebPlaybackActive()) return false;
+        webView.resumeVideo();
+        return true;
+    }
+
+    protected int getWebVideoWidth() {
+        return webView == null ? 0 : webView.getVideoWidth();
+    }
+
+    protected int getWebVideoHeight() {
+        return webView == null ? 0 : webView.getVideoHeight();
+    }
+
+    protected boolean hasWebMediaTarget() {
+        return webView != null && webView.hasMediaTarget();
+    }
+
+    protected boolean handleWebViewNavigation() {
+        return webView != null && webView.handleBackNavigation();
     }
 
     @Nullable
@@ -400,11 +574,25 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     private void attachPlayerView() {
+        getPlayerView().setVisibility(View.VISIBLE);
         if (mService != null) syncPlayerView(player().getPlayer());
     }
 
     private void detachPlayerView() {
         getPlayerView().setPlayer(null);
+    }
+
+    private void hidePlayerViewForWebPlayback() {
+        PlayerView playerView = getPlayerView();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        View shutter = playerView.findViewById(androidx.media3.ui.R.id.exo_shutter);
+        if (shutter != null) shutter.setVisibility(View.VISIBLE);
+        detachPlayerView();
+        playerView.setVisibility(View.INVISIBLE);
+    }
+
+    private void syncSeekPlayer() {
+        getSeekView().setPlayer(!isWebPlaybackActive() && isOwner() ? mController : null);
     }
 
     private void syncPlayerView(Player player) {
@@ -453,6 +641,11 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     private void pausePlayback() {
+        if (isWebPlaybackActive()) {
+            resumeWebPlaybackOnResume = !isFinishing() && (resumeWebPlaybackOnResume || !webView.isPlaybackPaused());
+            webView.pauseVideo();
+            return;
+        }
         if (mController != null) mController.pause();
         else if (mService != null) player().pause();
     }
@@ -594,11 +787,18 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         claimBinding();
         setRedirect(false);
         dispatchPendingObservers();
-        resumePlayback();
+        if (webView != null) webView.onResume();
+        if (!isWebPlaybackActive()) {
+            resumePlayback();
+        } else {
+            if (resumeWebPlaybackOnResume) webView.resumeVideo();
+            resumeWebPlaybackOnResume = false;
+        }
     }
 
     @Override
     protected void onPause() {
+        if (webView != null && !isInPictureInPictureMode()) webView.onPause();
         super.onPause();
         if (isRedirect()) pausePlayback();
     }
@@ -606,16 +806,131 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     @Override
     protected void onStop() {
         super.onStop();
-        if (isOwner() && (isFinishing() || PlayerSetting.isBackgroundOff())) pausePlayback();
+        if ((isWebPlaybackActive() || isOwner()) && (isFinishing() || PlayerSetting.isBackgroundOff())) pausePlayback();
         if (!isInPictureInPictureMode()) detachPlayerView();
     }
 
     @Override
     protected void onDestroy() {
+        releaseWebView();
         clearObservers();
         detachPlayerView();
         super.onDestroy();
         releasePlaybackService();
+    }
+
+    private void releaseWebView() {
+        releaseWebView(true);
+    }
+
+    private void releaseWebView(boolean destroy) {
+        if (webView == null) return;
+        BrowserWebView current = webView;
+        current.pauseVideo();
+        current.hideCustomView();
+        hideWebChallenge(current);
+        webView = null;
+        resumeWebPlaybackOnResume = false;
+        webPlaybackState = Player.STATE_IDLE;
+        if (current.getParent() instanceof ViewGroup parent) parent.removeView(current);
+        if (destroy) current.release();
+        syncSeekPlayer();
+        getSeekView().setVisibility(View.VISIBLE);
+        onWebPlaybackChanged(false);
+    }
+
+    private final BrowserWebView.PlaybackListener webViewListener = new BrowserWebView.PlaybackListener() {
+
+        @Override
+        public void onPlayingChanged(@NonNull BrowserWebView view, boolean isPlaying) {
+            if (webView != view) return;
+            if (isPlaying) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            PlaybackActivity.this.onPlayingChanged(isPlaying);
+        }
+
+        @Override
+        public void onStateChanged(@NonNull BrowserWebView view, @NonNull BrowserWebView.PlaybackState state) {
+            if (webView != view) return;
+            updateWebSeek(state);
+            int playerState = state.ended() ? Player.STATE_ENDED : state.buffering() ? Player.STATE_BUFFERING : Player.STATE_READY;
+            if (webPlaybackState != playerState) {
+                webPlaybackState = playerState;
+                PlaybackActivity.this.onStateChanged(playerState);
+            }
+            View progress = findViewById(R.id.progress);
+            boolean visible = state.started() && state.buffering();
+            if (progress != null && (progress.getVisibility() == View.VISIBLE) != visible) onWebProgressChanged(visible);
+        }
+
+        @Override
+        public void onFailure(@NonNull BrowserWebView view, boolean rendererGone) {
+            if (webView != view) return;
+            releaseWebView(!rendererGone);
+            onError(ResUtil.getString(R.string.error_play_url));
+        }
+
+        @Override
+        public void onFullscreenChanged(@NonNull BrowserWebView view, boolean fullscreen) {
+            if (webView == view) onWebFullscreenChanged(fullscreen);
+        }
+
+        @Override
+        public void onChallengeChanged(@NonNull BrowserWebView view, boolean visible) {
+            if (webView != view) return;
+            if (visible) showWebChallenge(view);
+            else hideWebChallenge(view);
+        }
+    };
+
+    private void showWebChallenge(@NonNull BrowserWebView view) {
+        if (webChallengeDialog != null) return;
+        view.hideCustomView();
+        if (!(view.getParent() instanceof ViewGroup parent)) return;
+        webChallengeParent = parent;
+        webChallengeIndex = parent.indexOfChild(view);
+        webChallengeParams = view.getLayoutParams();
+        parent.removeView(view);
+        webChallengeDialog = CloudflareDialog.create(this, view, ignored -> onWebChallengeDismissed(view)).show();
+    }
+
+    private void hideWebChallenge(@NonNull BrowserWebView view) {
+        CloudflareDialog dialog = webChallengeDialog;
+        webChallengeDialog = null;
+        if (dialog != null) dialog.dismiss();
+        restoreWebChallenge(view);
+    }
+
+    private void onWebChallengeDismissed(@NonNull BrowserWebView view) {
+        webChallengeDialog = null;
+        restoreWebChallenge(view);
+    }
+
+    private void restoreWebChallenge(@NonNull BrowserWebView view) {
+        ViewGroup parent = webChallengeParent;
+        ViewGroup.LayoutParams params = webChallengeParams;
+        webChallengeParent = null;
+        webChallengeParams = null;
+        if (webView != view || parent == null || view.getParent() != null) return;
+        if (params == null) params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        parent.addView(view, Math.min(Math.max(0, webChallengeIndex), parent.getChildCount()), params);
+        view.requestFocus();
+    }
+
+    private void updateWebSeek(@NonNull BrowserWebView.PlaybackState state) {
+        if (!supportsWebSeek()) return;
+        PlayerSeekView seekView = getSeekView();
+        seekView.setVisibility(state.isSeekable() ? View.VISIBLE : View.GONE);
+        if (!state.isSeekable() || scrubbing) return;
+        TimeBar timeBar = seekView.getTimeBar();
+        timeBar.setKeyTimeIncrement(getKeyTimeIncrementMs(state.durationMs()));
+        timeBar.setDuration(state.durationMs());
+        timeBar.setPosition(state.positionMs());
+        timeBar.setBufferedPosition(state.positionMs());
+        TextView position = seekView.findViewById(androidx.media3.ui.R.id.exo_position);
+        TextView duration = seekView.findViewById(androidx.media3.ui.R.id.exo_duration);
+        if (position != null) position.setText(Util.timeMs(state.positionMs()));
+        if (duration != null) duration.setText(Util.timeMs(state.durationMs()));
     }
 
     private final class ServiceReadyObserver<T> implements Observer<T> {

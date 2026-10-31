@@ -10,7 +10,7 @@ import com.fongmi.android.tv.bean.Parse;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.impl.ParseCallback;
 import com.fongmi.android.tv.server.Server;
-import com.fongmi.android.tv.ui.custom.CustomWebView;
+import com.fongmi.android.tv.ui.custom.ParseWebView;
 import com.fongmi.android.tv.utils.Task;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.android.tv.utils.WebViewUtil;
@@ -38,7 +38,7 @@ import okhttp3.Response;
 public class ParseJob implements ParseCallback {
 
     private final AtomicBoolean done = new AtomicBoolean();
-    private final List<CustomWebView> webViews;
+    private final List<ParseWebView> webViews;
     private ExecutorService executor;
     private ExecutorService infinite;
     private ParseCallback callback;
@@ -186,7 +186,7 @@ public class ParseJob implements ParseCallback {
         if (!WebViewUtil.support()) {
             onParseError();
         } else {
-            App.post(() -> webViews.add(CustomWebView.create(App.get()).start(key, from, headers, url, click, this, !url.contains("player/?url="))));
+            App.post(() -> webViews.add(ParseWebView.create(App.get()).start(key, from, headers, url, click, this, !url.contains("player/?url="))));
         }
     }
 
@@ -215,8 +215,7 @@ public class ParseJob implements ParseCallback {
     }
 
     private void stopWeb() {
-        for (CustomWebView webView : webViews) webView.stop(false);
-        for (CustomWebView webView : webViews) webView.destroy();
+        for (ParseWebView webView : webViews) webView.release();
         if (!webViews.isEmpty()) webViews.clear();
     }
 

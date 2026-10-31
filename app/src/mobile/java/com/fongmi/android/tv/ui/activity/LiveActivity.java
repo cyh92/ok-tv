@@ -56,7 +56,6 @@ import com.fongmi.android.tv.ui.adapter.ChannelAdapter;
 import com.fongmi.android.tv.ui.adapter.EpgDataAdapter;
 import com.fongmi.android.tv.ui.adapter.GroupAdapter;
 import com.fongmi.android.tv.ui.custom.CustomKeyDown;
-import com.fongmi.android.tv.ui.custom.WebViewPlayer;
 import com.fongmi.android.tv.ui.dialog.CastDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.InfoDialog;
@@ -101,8 +100,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private String mPlaybackKey;
     private boolean rotate;
     private int count;
-
-    private WebViewPlayer webPlayer;
 
     public static void start(Context context) {
         context.startActivity(new Intent(context, LiveActivity.class).putExtra("empty", LiveConfig.isEmpty()));
@@ -164,7 +161,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
-        webPlayer = new WebViewPlayer(this);//初始化webview
         mKeyDown = CustomKeyDown.create(this, mBinding.player);
         setPadding(mBinding.control.getRoot());
         setPadding(mBinding.recycler, true);
@@ -218,9 +214,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void setVideoView() {
-        webPlayer.setVisibility(View.GONE);
-        mBinding.video.addView(webPlayer, 0); // 添加到最底层
-
         setScale(LiveSetting.getScale());
         PlayerEngineDialog.setText(mBinding.control.action.player);
         mBinding.control.action.invert.setSelected(LiveSetting.isInvert());
@@ -230,6 +223,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void setPlaybackMode() {
+        if (isWebPlaybackActive()) return;
         PlaybackAction.setPlaybackMode(player(), mBinding.control.action.player, mBinding.control.action.decode);
     }
 
@@ -383,7 +377,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void checkPlay() {
-        if (player().isPlaying()) onPaused();
+        if (isWebPlaybackPlaying() || player().isPlaying()) onPaused();
         else onPlay();
     }
 
@@ -726,66 +720,21 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     public void stopPlaybackForRefresh() {
+        stopWebPlayback();
         stopPlayer();
     }
 
     @Override
     public void startPlayback(Result result, long position, MediaMetadata metadata) {
-//        startPlayer(mPlaybackKey = result.getRealUrl(), result, false, getHome().getTimeout(), position, metadata);
-
-        mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
-        if (result.getParse() == 2) {
-            Logger.t("LiveActivity").d("切换到WebView模式");
-            showWebView(result);
-        } else {
-            Logger.t("LiveActivity").d("切换到标准播放器模式");
-            webPlayer.stop();
-            webPlayer.setVisibility(View.GONE);
-            mBinding.player.setVisibility(View.VISIBLE);
-
-            startPlayer(mPlaybackKey = result.getRealUrl(), result, false, getHome().getTimeout(), position, metadata);
-        }
+        mPlaybackKey = result.getRealUrl();
+        if (startWebPlayback(result)) return;
+        startPlayer(mPlaybackKey, result, false, getHome().getTimeout(), position, metadata);
     }
 
-    // 显示WebView并加载URL
-    private void showWebView(Result result) {
-        try {
-            Logger.t("LiveActivity").d("初始化WebView播放器");
-            webPlayer.stop();
-            mBinding.player.setVisibility(View.GONE);
-            webPlayer.setVisibility(View.VISIBLE);
-            // webPlayer现在在最底层，不需要bringToFront
-
-            // 检查WebViewPlayer的触摸透明状态
-            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
-            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
-
-            // 设置回调监听
-            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
-                @Override
-                public void onPageStarted() {
-                    showProgress();
-                }
-
-                @Override
-                public void onPageFinished(View webView) {
-                    Logger.t("WebView").e("页面加载完成");
-                    hideProgress();
-                }
-
-                @Override
-                public void onPageLoadProgress(int progress) {
-                    if (progress > 99) {
-                        hideProgress();
-                    }
-                }
-            });
-            webPlayer.start(result);
-
-
-        } catch (Exception e) {
-            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
-        }
+    private boolean startWebPlayback(Result result) {
+        if (!startWebPlayback(mBinding.video, result, mKeyDown::onTouchEvent)) return false;
+        updateNavigationKey(mPlaybackKey);
+        return true;
     }
 
     @Override
@@ -925,7 +874,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     protected void onPlayingChanged(boolean isPlaying) {
-        if (isPlaying || isPaused()) updatePlayControl(isPlaying);
+        if (isPlaying || isPaused() || isWebPlaybackActive()) updatePlayControl(isPlaying);
     }
 
     private void updatePlayControl(boolean isPlaying) {
@@ -1004,7 +953,23 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         }
     }
 
+@Override
+    protected void onWebProgressChanged(boolean visible) {
+        if (visible) showProgress();
+        else hideProgress();
+    }
+
+    @Override
+    protected void onWebPlaybackChanged(boolean active) {
+        PlaybackAction.setWebPlaybackMode(active, mBinding.control.action.player, mBinding.control.action.decode, mBinding.control.action.speed, mBinding.control.action.scale, mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video);
+        if (!active) {
+            setPlaybackMode();
+            setTrackVisible();
+        }
+    }
+
     private void setTrackVisible() {
+        if (isWebPlaybackActive()) return;
         PlaybackAction.setTracks(player(), mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video, mBinding.control.action.speed);
         mBinding.control.seek.setVisibility(player().isLive() ? View.GONE : View.VISIBLE);//直播时隐藏进度条
     }
@@ -1022,10 +987,12 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void onPaused() {
+        if (pauseWebPlayback()) return;
         controller().pause();
     }
 
     private void onPlay() {
+        if (resumeWebPlayback()) return;
         controller().play();
     }
 

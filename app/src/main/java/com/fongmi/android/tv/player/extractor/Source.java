@@ -7,6 +7,7 @@ import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.utils.Task;
+import com.fongmi.android.tv.utils.UrlUtil;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -45,6 +46,8 @@ public class Source {
 
     private void addCallable(Iterator<Episode> iterator, List<Callable<List<Episode>>> items) {
         String url = iterator.next().getUrl();
+        String scheme = UrlUtil.scheme(url);
+        if ("push".equals(scheme) || "video".equals(scheme) || "webview".equals(scheme)) return;
         if (Thunder.Parser.match(url)) {
             items.add(Thunder.Parser.get(url));
             iterator.remove();
@@ -76,7 +79,6 @@ public class Source {
         Extractor extractor = getExtractor(uri);
         if (extractor != null) result.setParse(0);
         if (extractor instanceof Video) result.setParse(1);
-        if (extractor instanceof WebView) result.setParse(2);//WebView模式
         return extractor == null ? url : extractor.fetch(result);
     }
 
