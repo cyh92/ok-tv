@@ -2,7 +2,6 @@ package com.fongmi.android.tv.ui.custom;
 
 import android.net.Uri;
 import android.view.View;
-import android.webkit.ValueCallback;
 
 import java.util.Map;
 
@@ -38,6 +37,17 @@ interface ParseKernel {
         void onRenderProcessGone();
     }
 
+    /**
+     * 脚本执行结果回调。
+     * <p>
+     * 不用 android.webkit.ValueCallback：X5 的 evaluateJavascript 用的是
+     * com.tencent.smtt.sdk.ValueCallback，两者互不兼容，故由本接口统一。
+     */
+    interface Callback {
+
+        void onResult(String value);
+    }
+
     /** 实际承载渲染的 View，用于布局与触摸分发。 */
     View getView();
 
@@ -47,7 +57,7 @@ interface ParseKernel {
 
     void loadUrl(String url);
 
-    void evaluateJavascript(String script, ValueCallback<String> callback);
+    void evaluateJavascript(String script, Callback callback);
 
     void stopLoading();
 

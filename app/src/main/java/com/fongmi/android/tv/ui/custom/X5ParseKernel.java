@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.net.http.SslError;
 import android.text.TextUtils;
 import android.view.View;
-import android.webkit.ValueCallback;
 
 import com.fongmi.android.tv.setting.Setting;
 import com.github.catvod.crawler.SpiderDebug;
@@ -16,6 +15,7 @@ import com.tencent.smtt.export.external.interfaces.WebResourceError;
 import com.tencent.smtt.export.external.interfaces.WebResourceRequest;
 import com.tencent.smtt.export.external.interfaces.WebResourceResponse;
 import com.tencent.smtt.sdk.CookieManager;
+import com.tencent.smtt.sdk.ValueCallback;
 import com.tencent.smtt.sdk.WebSettings;
 import com.tencent.smtt.sdk.WebView;
 import com.tencent.smtt.sdk.WebViewClient;
@@ -80,8 +80,11 @@ final class X5ParseKernel implements ParseKernel {
     }
 
     @Override
-    public void evaluateJavascript(String script, ValueCallback<String> callback) {
-        view.evaluateJavascript(script, callback);
+    public void evaluateJavascript(String script, Callback callback) {
+        // X5 的 ValueCallback 继承自 android.webkit.ValueCallback，
+        // 但其 evaluateJavascript 参数类型是 X5 自己的，故需显式声明类型避免重载歧义
+        ValueCallback<String> cb = value -> callback.onResult(value);
+        view.evaluateJavascript(script, cb);
     }
 
     @Override
@@ -149,7 +152,7 @@ final class X5ParseKernel implements ParseKernel {
 
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-            Uri uri = Uri.parse(request.getUrl());
+            Uri uri = request.getUrl();
             if (host.onIntercept(uri, request.getRequestHeaders(), request.isForMainFrame())) return empty();
             return super.shouldInterceptRequest(view, request);
         }
@@ -183,7 +186,8 @@ final class X5ParseKernel implements ParseKernel {
             return false;
         }
 
-        @Override
+        // X5 的 WebViewClient 未提供与系统一致的 onRenderProcessGone 签名，
+        // 故不覆写，渲染进程异常由 X5 内核自行处理
         public boolean onRenderProcessGone(WebView view, WebViewClient.RenderProcessGoneDetail detail) {
             SpiderDebug.log(TAG, "render process gone");
             host.onRenderProcessGone();

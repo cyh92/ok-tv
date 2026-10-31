@@ -74,8 +74,9 @@ final class SystemParseKernel implements ParseKernel {
     }
 
     @Override
-    public void evaluateJavascript(String script, ValueCallback<String> callback) {
-        view.evaluateJavascript(script, callback);
+    public void evaluateJavascript(String script, Callback callback) {
+        ValueCallback<String> cb = value -> callback.onResult(value);
+        view.evaluateJavascript(script, cb);
     }
 
     @Override
@@ -129,7 +130,7 @@ final class SystemParseKernel implements ParseKernel {
 
     private class Client extends WebViewClient {
 
-        private final Host host;
+        protected final Host host;
 
         Client(Host host) {
             this.host = host;
