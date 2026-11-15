@@ -205,3 +205,10 @@ jobs:
             runtime/build/thunder/outputs/apk/arm64/release/*.apk
             runtime/build/mpv/outputs/apk/arm64/release/*.apk
           if-no-files-found: error
+      - name: Upload aar
+        uses: actions/upload-artifact@v4
+        with:
+          name: media_aar
+          path: |
+            chaquo/runtime/build/outputs/aar/*.aar
+          if-no-files-found: error
