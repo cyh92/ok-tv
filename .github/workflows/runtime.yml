@@ -1,32 +1,12 @@
 name: Build runtime modules (from source)
-
-# Builds the independent runtime APKs (Python, QuickJS, Node.js, Thunder,
-# MPV) from the fork's own runtime/ project, signed with the same keystore
-# as the app (app/debug.keystore, CN=Zhulong) so the app's
-# "Invalid runtime signer" check accepts them. The official FongMi
-# runtime APKs are signed with FongMi's key and can never be installed
-# by our app.
-#
-# Outputs (arm64 only — the user's phone is arm64-v8a):
-#   runtime/build/python/outputs/apk/arm64/release/runtime-python-arm64_v8a.apk
-#   runtime/build/quickjs/outputs/apk/arm64/release/runtime-quickjs-arm64_v8a.apk
-#   runtime/build/nodejs/outputs/apk/arm64/release/runtime-nodejs-arm64_v8a.apk
-#   runtime/build/thunder/outputs/apk/arm64/release/runtime-thunder-arm64_v8a.apk
-#   runtime/build/mpv/outputs/apk/arm64/release/runtime-mpv-arm64_v8a.apk
-# Versions match the official catalog (python 1.1.3/113, quickjs 1.1.1/111,
-# nodejs 1.0.7/107, thunder 1.0.4/5, mpv 1.1.1/111) so the catalog entries
-# stay compatible. BD-J is NOT built: it needs a j2re-zero runtime zip
-# (tvBdjRuntimeDirectory) that is not in this repo, and BD-J is only for
-# Blu-ray disc menus, not for video sources.
-#
-# The Python runtime needs app/libs/lib-mpvplayer-release.aar (cxxAar,
-# verified by PreparePythonAarTask), so the FongMi native build runs
-# first (same steps as android.yml). The Chaquopy runtime AAR is built
-# before the runtime APKs because runtime/build.gradle reads it as a
-# plain file (chaquo/runtime/build/outputs/aar/python-runtime-*.aar).
-
 on:
   workflow_dispatch:
+    inputs:
+      add_suffix:
+        description: '是否追加包名后缀（.cyh）'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   build:
@@ -78,6 +58,25 @@ jobs:
             echo "SDK 37 + NDK 29 already installed, skipping sdkmanager install"
           fi
 
+      - name: Override runtime package names
+        env:
+          ADD_SUFFIX: ${{ inputs.add_suffix }}
+        run: |
+          set -euxo pipefail
+          FILE=buildSrc/src/main/groovy/com/fongmi/gradle/AbiApkPackaging.groovy
+          if [ "$ADD_SUFFIX" != "true" ]; then
+            echo "add_suffix is off - keeping original package names"
+            grep -n "packageName:" "$FILE"
+            exit 0
+          fi
+          sed -i "s#packageName: 'com\.fongmi\.runtime\.#packageName: 'com.fongmi.cyh.runtime.#g" "$FILE"
+          echo "--- package names after override ---"
+          grep -n "packageName:" "$FILE"
+          COUNT=$(grep -c "packageName: 'com.fongmi.cyh.runtime\." "$FILE")
+          if [ "$COUNT" -ne 6 ]; then
+            echo "::error::expected 6 overridden package names, got $COUNT"
+            exit 1
+          fi
       - name: Create local.properties
         run: |
           SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
