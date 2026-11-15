@@ -210,5 +210,5 @@ jobs:
         with:
           name: media_aar
           path: |
-            chaquo/runtime/build/outputs/aar/*.aar
+            "${{ github.workspace }}/app/libs/*.aar"
           if-no-files-found: error
