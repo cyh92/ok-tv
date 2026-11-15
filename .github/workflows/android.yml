@@ -1,0 +1,218 @@
+name: Build mobile APK (from source)
+
+# Builds the mobile debug APK entirely from public sources:
+#  1. compiles mpv + ffmpeg native libs from FongMi/mpv-android (+FongMi/mpv)
+#     and packages them as lib-mpvplayer-release.aar / lib-decoder-ffmpeg-release.aar
+#  2. wires FongMi/media (release-1.11.0-fongmi) in as source dependencies
+#     so the androidx.media3.* classes the app imports actually resolve
+#  2b. adds the 46 missing FongMi-custom media3 classes as stubs
+#     (.github/stubs-media.zip -> ../media, .github/stubs-app.zip -> app)
+#     and patches 31 missing methods into the media checkout
+#     (.github/scripts/patch_media.py); see stub-plan.md §6
+#  3. builds :app:assembleMobileDebug (mobile flavor)
+# Based on the public recipe in AoThen/TVBoxAPP (.github/workflows/build-tvbox-osc.yml),
+# adapted to this fork (repo already checked out; real mpvplayer/ui-danmaku/
+# decoder-ffmpeg modules are used instead of stub classes).
+
+on:
+  push:
+    branches: [fongmi]
+    paths:
+      # NOTE: only the workflow file itself triggers a run. Upload the stub
+      # zips and patch script first, then this file last, so one push starts
+      # exactly one run. Stub-only updates are started with workflow_dispatch.
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Install Android SDK 37
+        run: |
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "SDK_DIR=$SDK_DIR"
+          echo "--- already installed platforms ---"
+          ls "$SDK_DIR/platforms" || true
+          echo "--- already installed build-tools ---"
+          ls "$SDK_DIR/build-tools" || true
+
+          SDKMANAGER=""
+          for c in "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/cmdline-tools/bin/sdkmanager"; do
+            if [ -x "$c" ]; then SDKMANAGER="$c"; break; fi
+          done
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$SDK_DIR/cmdline-tools" -maxdepth 3 -name sdkmanager -type f -executable 2>/dev/null | head -n 1)
+          fi
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager not found under $SDK_DIR/cmdline-tools"
+            ls -R "$SDK_DIR/cmdline-tools" || true
+            exit 1
+          fi
+          chmod +x "$SDKMANAGER" || true
+          echo "SDKMANAGER=$SDKMANAGER"
+
+          yes | "$SDKMANAGER" --sdk_root="$SDK_DIR" --licenses >/dev/null || true
+
+          NEED=""
+          ls -d "$SDK_DIR/platforms/android-37"* >/dev/null 2>&1 || NEED="$NEED platforms;android-37"
+          [ -d "$SDK_DIR/build-tools/37.0.0" ] || NEED="$NEED build-tools;37.0.0"
+          if [ -n "$NEED" ]; then
+            echo "Installing missing:$NEED"
+            "$SDKMANAGER" --sdk_root="$SDK_DIR" $NEED
+          else
+            echo "SDK 37 already installed, skipping sdkmanager install"
+          fi
+
+      - name: Create local.properties
+        run: |
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          {
+            echo "sdk.dir=$SDK_DIR"
+            echo "storeFile=debug.keystore"
+            echo "keyAlias=androiddebugkey"
+            echo "storePassword=android"
+          } > local.properties
+
+      - name: Generate debug keystore
+        run: |
+          # The keystore is committed in the repo (app/debug.keystore, CN=Zhulong)
+          # so every build signs with the same key and updates install in place.
+          # Only generate a fresh one if it is missing (e.g. a clean fork).
+          if [ ! -f app/debug.keystore ]; then
+            keytool -genkeypair -storetype PKCS12 -keystore app/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
+          else
+            echo "Using committed keystore app/debug.keystore"
+          fi
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install lxml ujson pyquery requests jsonpath cachetools pycryptodome beautifulsoup4
+
+      - name: FongMi Native Checkout
+        run: |
+          set -euxo pipefail
+          MPA="${{ github.workspace }}/mpv-android"
+          git clone --depth 1 --branch fongmi https://github.com/FongMi/mpv-android.git "$MPA"
+          git clone --depth 1 --branch fongmi https://github.com/FongMi/mpv.git "$MPA/buildscripts/deps/mpv"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends autoconf pkgconf libtool ninja-build cmake python3-pip gperf nasm patch ant
+          python3 -m pip install --upgrade "meson>=1.11.0"
+          echo "meson: $(which meson) $(meson --version)"
+          MESON_VER="$(meson --version)"
+          if [ "$(printf '%s\n%s\n' "1.11.0" "$MESON_VER" | sort -V | head -n 1)" != "1.11.0" ]; then
+            echo "::error::meson $MESON_VER is older than 1.11.0 (fontconfig requires >= 1.11.0)"
+            exit 1
+          fi
+
+      - name: FongMi Native Export Env
+        run: |
+          set -euxo pipefail
+          cd "${{ github.workspace }}/mpv-android/buildscripts"
+          ./include/ci.sh export >> "$GITHUB_ENV"
+
+      - name: FongMi Native Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/mpv-android-cache
+          key: "${{ env.CACHE_IDENTIFIER }}-TV"
+          enableCrossOsArchive: true
+
+      - name: FongMi Native Build
+        run: |
+          set -euxo pipefail
+          cd "${{ github.workspace }}/mpv-android/buildscripts"
+          mkdir -p "${{ runner.temp }}/mpv-android-cache"
+          export CMAKE_POLICY_VERSION_MINIMUM=3.5
+          printf 'tries = 5\nretry_connrefused = on\nretry_on_http_error = 500,502,503,504\n' > "$HOME/.wgetrc"
+          export MPV_GIT_REF=fongmi
+          CACHE_MODE=folder CACHE_FOLDER="${{ runner.temp }}/mpv-android-cache" ./include/ci.sh install
+          MPV_ANDROID_NATIVE_ONLY=1 ./include/ci.sh build
+
+      - name: FongMi Native JNI & Package
+        run: |
+          set -euxo pipefail
+          MPA="${{ github.workspace }}/mpv-android"
+          SCRIPTS="${{ github.workspace }}/.github/scripts"
+          TMP="${{ runner.temp }}"
+          curl -sL -o "$TMP/ffmpeg_jni.cc" \
+            "https://raw.githubusercontent.com/androidx/media/1.11.1/libraries/decoder_ffmpeg/src/main/jni/ffmpeg_jni.cc"
+          NDK_DIR=$(ls -d "$MPA/buildscripts/sdk/android-ndk-r30" 2>/dev/null || ls -d "$MPA/buildscripts/sdk/android-ndk-"* 2>/dev/null | head -n 1)
+          echo "NDK_DIR=$NDK_DIR"
+          bash -e "$SCRIPTS/build_ffmpeg_jni.sh" \
+            "$NDK_DIR" "$TMP/ffmpeg_jni.cc" \
+            "$MPA/buildscripts/prefix" "$TMP/mpv-jni"
+          python3 "$SCRIPTS/make_mpv_aars.py" \
+            --libs-dir "$MPA/app/src/main/libs" \
+            --jni-dir "$TMP/mpv-jni" \
+            --out-dir "${{ github.workspace }}/app/libs"
+          ls -la "${{ github.workspace }}/app/libs"
+          rm -rf "$MPA"
+
+      - name: Upload built AARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fongmi-native-aars
+          path: app/libs/lib-*.aar
+          if-no-files-found: error
+
+      - name: Wire FongMi media (source dependency)
+        run: |
+          set -euxo pipefail
+          git clone --branch release-1.11.0-fongmi --depth 1 https://github.com/FongMi/media.git ../media
+          sed -i 's/pluginManagement {/pluginManagement {\n    includeBuild("..\/media\/build-logic")\n    plugins { id("org.jetbrains.kotlin.android") version "2.2.0" }/' settings.gradle
+          python3 .github/scripts/merge_toml.py
+          for entry in common:common session:session exoplayer:exoplayer container:container decoder:decoder decoder-ffmpeg:decoder_ffmpeg ui:ui ui-danmaku:ui_danmaku database:database datasource:datasource datasource-okhttp:datasource_okhttp extractor:extractor mpvplayer:mpvplayer exoplayer-hls:exoplayer_hls exoplayer-dash:exoplayer_dash exoplayer-rtsp:exoplayer_rtsp exoplayer-smoothstreaming:exoplayer_smoothstreaming; do
+            proj="${entry%%:*}"
+            dir="${entry##*:}"
+            echo "include ':lib-${proj}'" >> settings.gradle
+            echo "project(':lib-${proj}').projectDir = new File(rootDir, '../media/libraries/${dir}')" >> settings.gradle
+          done
+          sed -i '/testImplementation/d' ../media/libraries/*/build.gradle.kts
+          sed -i '/androidTestImplementation/d' ../media/libraries/*/build.gradle.kts
+          for dep in common session ui ui-danmaku exoplayer extractor datasource database datasource-okhttp mpvplayer exoplayer-hls exoplayer-dash exoplayer-rtsp exoplayer-smoothstreaming; do
+            sed -i "/^    coreLibraryDesugaring libs.desugar/i\    implementation project(':lib-${dep}')" app/build.gradle
+          done
+          sed -i '$ i\  public DefaultRenderersFactory setFfmpegAudioPrefer(boolean prefer) { return this; }\n  public DefaultRenderersFactory setFfmpegVideoPrefer(boolean prefer) { return this; }\n  public DefaultRenderersFactory setEnableDv7HevcFallback(boolean enable) { return this; }\n' ../media/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/DefaultRenderersFactory.java
+          sed -i 's/getPlayerView()\.isDebugViewVisible()/false/g' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          sed -i 's/getPlayerView()\.toggleDebugView();/{}/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          sed -i 's/getPlayerView()\.hideDebugView();/{}/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          # Missing FongMi-custom media3 classes (46 stubs) + 31 missing methods
+          # (stub-plan.md §6): 45 stubs go into the media checkout (right module
+          # per class), 1 (LibassPlayerViewController) into the app module.
+          python3 -m zipfile -e .github/stubs-media.zip ../media/
+          python3 -m zipfile -e .github/stubs-app.zip app/src/main/java/
+          python3 .github/scripts/patch_media.py ../media
+          echo "--- stub files placed ---"
+          test -f ../media/libraries/common/src/main/java/androidx/media3/common/DiscMenuState.java
+          test -f ../media/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/source/EndTrimMediaSource.java
+          test -f ../media/libraries/mpvplayer/src/main/java/androidx/media3/common/audio/AudioChannelMix.java
+          test -f app/src/main/java/androidx/media3/ui/libass/LibassPlayerViewController.java
+          echo "stub check OK"
+
+      - name: Build mobile debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleMobileDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-mobile-debug
+          path: app/build/outputs/apk/mobile/debug/*.apk
+          if-no-files-found: error
