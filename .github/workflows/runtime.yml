@@ -26,7 +26,6 @@ name: Build runtime modules (from source)
 # plain file (chaquo/runtime/build/outputs/aar/python-runtime-*.aar).
 
 on:
-  push:
   workflow_dispatch:
 
 jobs:
