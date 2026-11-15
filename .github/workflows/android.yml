@@ -15,13 +15,6 @@ name: Build mobile APK (from source)
 # decoder-ffmpeg modules are used instead of stub classes).
 
 on:
-  push:
-    branches: [fongmi]
-    paths:
-      # NOTE: only the workflow file itself triggers a run. Upload the stub
-      # zips and patch script first, then this file last, so one push starts
-      # exactly one run. Stub-only updates are started with workflow_dispatch.
-      - '.github/workflows/android.yml'
   workflow_dispatch:
 
 jobs:
