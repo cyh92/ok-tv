@@ -210,5 +210,5 @@ jobs:
         with:
           name: media_aar
           path: |
-            "${{ github.workspace }}/app/libs/*.aar"
+            ${{ github.workspace }}/app/libs/*.aar
           if-no-files-found: error
