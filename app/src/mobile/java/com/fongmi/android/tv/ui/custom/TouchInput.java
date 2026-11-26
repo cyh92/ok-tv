@@ -76,7 +76,9 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
         scaling = false;
         pinchScale.reset();
         listener.onPinchScaleEnd();
-        if (!videoView.getVideoTransform().equals(VideoTransform.DEFAULT)) videoView.animateVideoTransform(VideoTransform.DEFAULT, 250);
+        // 本地 media3 为 1.4.x，无 VideoTransform.DEFAULT / animateVideoTransform，改为直接复位
+        // if (!videoView.getVideoTransform().equals(VideoTransform.DEFAULT)) videoView.animateVideoTransform(VideoTransform.DEFAULT, 250);
+        videoView.setVideoTransform(new VideoTransform(1f, 1f, 0f, 0f));
     }
 
     public void setLock(boolean locked) {
@@ -85,7 +87,10 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
     }
 
     public boolean isScaled() {
-        return !videoView.getVideoTransform().equals(VideoTransform.DEFAULT);
+        // 本地 media3 为 1.4.x，无 VideoTransform.DEFAULT，改为按分量判断
+        // return !videoView.getVideoTransform().equals(VideoTransform.DEFAULT);
+        VideoTransform transform = videoView.getVideoTransform();
+        return transform.scaleX != 1f || transform.scaleY != 1f || transform.panX != 0f || transform.panY != 0f;
     }
 
     private boolean isMultiTouch(MotionEvent e) {
@@ -229,10 +234,11 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
     public boolean onScaleBegin(@NonNull ScaleGestureDetector detector) {
         App.removeCallbacks(endScaleCooldown);
         if (!listener.isScaleEnabled() || hasScrollAction() || isSpeedPressActive() || locked || animating) return scaling = false;
-        videoView.finishVideoTransformAnimation();
+        // 本地 media3 为 1.4.x，无 finishVideoTransformAnimation / getVideoBounds
+        // videoView.finishVideoTransformAnimation();
         VideoTransform transform = videoView.getVideoTransform();
         pinchScale.setScale(transform.scaleX, transform.scaleY);
-        pinchContentBounds.set(videoView.getVideoBounds());
+        // pinchContentBounds.set(videoView.getVideoBounds());
         if (pinchContentBounds.isEmpty()) pinchContentBounds.set(0, 0, videoView.getWidth(), videoView.getHeight());
         pivotX = pinchContentBounds.centerX();
         pivotY = pinchContentBounds.centerY();
@@ -271,7 +277,9 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
             float releasedX = PinchScale.releaseTranslation(translationX, pinchContentBounds.left, pinchContentBounds.right, pivotX, pinchScale.getScaleX(), pinchScale.getVisualScaleX(), videoView.getWidth());
             float releasedY = PinchScale.releaseTranslation(translationY, pinchContentBounds.top, pinchContentBounds.bottom, pivotY, pinchScale.getScaleY(), pinchScale.getVisualScaleY(), videoView.getHeight());
             VideoTransform target = videoTransform(pinchScale.getScaleX(), pinchScale.getScaleY(), releasedX, releasedY);
-            if (!target.equals(videoView.getVideoTransform())) videoView.animateVideoTransform(target, 180);
+            // 本地 media3 为 1.4.x，无 animateVideoTransform，改为直接应用
+            // if (!target.equals(videoView.getVideoTransform())) videoView.animateVideoTransform(target, 180);
+            videoView.setVideoTransform(target);
         }
         pinchScale.end();
         listener.onPinchScaleEnd();
