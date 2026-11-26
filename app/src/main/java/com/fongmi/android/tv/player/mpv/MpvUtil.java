@@ -101,7 +101,8 @@ public final class MpvUtil {
     static MpvPlayer buildPlayer(Player.Listener listener, MpvPlayerConfig config) {
         MpvDecoderMode mode = MpvDecoderMode.fromCommonDecoderMode(DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_MPV, C.TRACK_TYPE_VIDEO));
         MpvPlayer player = new MpvPlayer.Builder(App.get()).setVideoDecoderMode(mode).setConfig(config).build();
-        player.setSubtitleContentLoader(new SubtitleFileContent());
+        // 旧版 mpv AAR 无 MpvSubtitleContentLoader，字幕加载器注入已注释
+//        player.setSubtitleContentLoader(new SubtitleFileContent());
         setPreferredTextLanguages(player);
         player.addListener(listener);
         return player;
@@ -167,7 +168,9 @@ public final class MpvUtil {
         MpvAndroidOptions.Builder options = new MpvAndroidOptions.Builder().setShaderCacheDirectory(shaderCacheDirectory).setAudioPassthroughEnabled(DecodeSetting.isAudioPassThrough()).setDolbyVisionOutputPolicy(DecodeSetting.getDolbyVisionOutputPolicy());
         options.setGpuNextEnabled(videoOptions.gpuNext());
         options.setVulkanEnabled(videoOptions.vulkan());
-        config.addAndroidDefaults(options.build()).setMotionInterpolationFps(videoOptions.motionFps());
+//        config.addAndroidDefaults(options.build()).setMotionInterpolationFps(videoOptions.motionFps());
+        config.addAndroidDefaults(options.build());
+        // 旧版 mpv AAR 无 setMotionInterpolationFps，插帧仅由 Exo 控制器处理
     }
 
     record VideoOptions(int motionFps, boolean gpuNext, boolean vulkan) {

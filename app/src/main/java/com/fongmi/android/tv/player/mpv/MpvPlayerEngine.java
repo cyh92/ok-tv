@@ -27,7 +27,7 @@ import com.fongmi.android.tv.player.media.ConcatenatingUrl;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.server.LogSession;
-import com.fongmi.android.tv.setting.PlayerSetting;
+//import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.SubtitleSetting;
 
 import org.json.JSONException;
@@ -42,7 +42,7 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
     private final MpvPlayer player;
     private final MpvUtil.VideoOptions videoOptions;
     private int configuredMotionFps;
-    private final Runnable motionListener = this::updateMotionFps;
+//    private final Runnable motionListener = this::updateMotionFps;
     private final Runnable updateLog = this::updateLogLevel;
     private final Runnable logListener = () -> App.post(updateLog);
 
@@ -52,7 +52,8 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
         MpvPlayerConfig config = MpvUtil.buildConfig(videoOptions);
         this.configuredMotionFps = videoOptions.motionFps();
         this.player = MpvUtil.buildPlayer(listener, config);
-        this.player.addMotionInterpolationListener(motionListener);
+        // 旧版 mpv AAR 无插帧监听接口
+//        this.player.addMotionInterpolationListener(motionListener);
         this.scripts = new MpvScriptSession(player, scriptItems);
         this.provider = new MpvErrorMessageProvider();
         this.effect = new MpvPlayerEffect(player);
@@ -77,9 +78,10 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
     }
 
     private void updateMotionFps() {
-        if (!player.isMotionInterpolationSupported() || player.isMotionInterpolationUpdatePending()) return;
-        int fps = player.getMotionInterpolationFps();
-        if (fps == PlayerSetting.getMotionFps()) configuredMotionFps = fps;
+        // 旧版 mpv AAR 无插帧接口，原实现已注释
+//        if (!player.isMotionInterpolationSupported() || player.isMotionInterpolationUpdatePending()) return;
+//        int fps = player.getMotionInterpolationFps();
+//        if (fps == PlayerSetting.getMotionFps()) configuredMotionFps = fps;
     }
 
     @Override
@@ -113,7 +115,8 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
         LogSession.get().removeListener(logListener);
         App.removeCallbacks(updateLog);
         scripts.release();
-        player.removeMotionInterpolationListener(motionListener);
+        // 旧版 mpv AAR 无插帧监听接口
+//        player.removeMotionInterpolationListener(motionListener);
         player.removeListener(this);
         player.setAudioOutputListener(null);
         player.release();

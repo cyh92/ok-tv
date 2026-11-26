@@ -9,7 +9,8 @@ import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DefaultDataSource;
 import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import androidx.media3.exoplayer.text.DefaultSubtitleContentLoader;
-import androidx.media3.mpvplayer.MpvSubtitleContentLoader;
+// 旧版 mpv AAR 无 MpvSubtitleContentLoader，相关引用已注释
+//import androidx.media3.mpvplayer.MpvSubtitleContentLoader;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.player.exo.ExoUtil;
@@ -20,11 +21,14 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Set;
 
-public final class SubtitleFileContent implements MpvSubtitleContentLoader {
+// 旧版 mpv AAR 无 MpvSubtitleContentLoader，接口实现已注释
+//public final class SubtitleFileContent implements MpvSubtitleContentLoader {
+public final class SubtitleFileContent  {
 
     private static final Set<String> SUPPORTED_SCHEMES = Set.of("file", "content", "http", "https");
 
-    @Override
+    // 旧版 mpv AAR 无 MpvSubtitleContentLoader，@Override 已注释
+//    @Override
     public SubtitleContent load(MediaItem item, Uri uri, Format format) throws IOException {
         if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException();
         if (!SUPPORTED_SCHEMES.contains(UriUtil.scheme(uri))) return SubtitleContent.UNSUPPORTED;

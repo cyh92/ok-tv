@@ -76,7 +76,9 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
         scaling = false;
         pinchScale.reset();
         listener.onPinchScaleEnd();
-        if (!videoView.getVideoTransform().equals(VideoTransform.DEFAULT)) videoView.animateVideoTransform(VideoTransform.DEFAULT, 250);
+        // 旧版 UI AAR 无 animateVideoTransform，改为直接设置
+//        if (!videoView.getVideoTransform().equals(VideoTransform.DEFAULT)) videoView.animateVideoTransform(VideoTransform.DEFAULT, 250);
+        if (!videoView.getVideoTransform().equals(VideoTransform.DEFAULT)) videoView.setVideoTransform(VideoTransform.DEFAULT);
     }
 
     public void setLock(boolean locked) {
@@ -229,10 +231,13 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
     public boolean onScaleBegin(@NonNull ScaleGestureDetector detector) {
         App.removeCallbacks(endScaleCooldown);
         if (!listener.isScaleEnabled() || hasScrollAction() || isSpeedPressActive() || locked || animating) return scaling = false;
-        videoView.finishVideoTransformAnimation();
+        // 旧版 UI AAR 无 finishVideoTransformAnimation，无需结束动画
+//        videoView.finishVideoTransformAnimation();
         VideoTransform transform = videoView.getVideoTransform();
         pinchScale.setScale(transform.scaleX, transform.scaleY);
-        pinchContentBounds.set(videoView.getVideoBounds());
+        // 旧版 UI AAR 无 getVideoBounds，退化为使用整个 PlayerView 区域
+//        pinchContentBounds.set(videoView.getVideoBounds());
+        pinchContentBounds.set(0, 0, videoView.getWidth(), videoView.getHeight());
         if (pinchContentBounds.isEmpty()) pinchContentBounds.set(0, 0, videoView.getWidth(), videoView.getHeight());
         pivotX = pinchContentBounds.centerX();
         pivotY = pinchContentBounds.centerY();
@@ -271,7 +276,9 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
             float releasedX = PinchScale.releaseTranslation(translationX, pinchContentBounds.left, pinchContentBounds.right, pivotX, pinchScale.getScaleX(), pinchScale.getVisualScaleX(), videoView.getWidth());
             float releasedY = PinchScale.releaseTranslation(translationY, pinchContentBounds.top, pinchContentBounds.bottom, pivotY, pinchScale.getScaleY(), pinchScale.getVisualScaleY(), videoView.getHeight());
             VideoTransform target = videoTransform(pinchScale.getScaleX(), pinchScale.getScaleY(), releasedX, releasedY);
-            if (!target.equals(videoView.getVideoTransform())) videoView.animateVideoTransform(target, 180);
+            // 旧版 UI AAR 无 animateVideoTransform，改为直接设置
+//            if (!target.equals(videoView.getVideoTransform())) videoView.animateVideoTransform(target, 180);
+            if (!target.equals(videoView.getVideoTransform())) videoView.setVideoTransform(target);
         }
         pinchScale.end();
         listener.onPinchScaleEnd();
